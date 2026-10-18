@@ -1,30 +1,20 @@
-import jsesc from 'jsesc'
+import { isServer } from '@tanstack/router-core/isServer'
+import { useRouter } from './useRouter'
 
-export function ScriptOnce({
-  className,
-  children,
-  log,
-  ...rest
-}: { children: string; log?: boolean } & React.HTMLProps<HTMLScriptElement>) {
-  if (typeof document !== 'undefined') {
+/**
+ * Server-only helper to emit a script tag exactly once during SSR.
+ */
+export function ScriptOnce({ children }: { children: string }) {
+  const router = useRouter()
+  if (!(isServer ?? router.isServer)) {
     return null
   }
 
   return (
     <script
-      {...rest}
-      className={`tsr-once ${className || ''}`}
+      nonce={router.options.ssr?.nonce}
       dangerouslySetInnerHTML={{
-        __html: [
-          children,
-          (log ?? true) && process.env.NODE_ENV === 'development'
-            ? `console.info(\`Injected From Server:
-${jsesc(children.toString(), { quotes: 'backtick' })}\`)`
-            : '',
-          'if (typeof __TSR__ !== "undefined") __TSR__.cleanScripts()',
-        ]
-          .filter(Boolean)
-          .join('\n'),
+        __html: children + ';document.currentScript.remove()',
       }}
     />
   )

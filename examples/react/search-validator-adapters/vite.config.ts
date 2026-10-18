@@ -1,7 +1,8 @@
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
-import { TanStackRouterVite } from '@tanstack/router-plugin/vite'
+import { tanstackRouter } from '@tanstack/router-plugin/vite'
 import packageJson from './package.json'
+import tailwindcss from '@tailwindcss/vite'
 
 export default defineConfig({
   test: {
@@ -10,7 +11,14 @@ export default defineConfig({
     watch: false,
     environment: 'jsdom',
     typecheck: { enabled: true },
+    setupFiles: ['./tests/jest-dom.setup.ts'],
   },
-  // TODO remove `any` when vitest supports vite 6
-  plugins: [TanStackRouterVite(), react() as any],
+  plugins: [
+    tailwindcss(),
+    tanstackRouter({
+      target: 'react',
+      autoCodeSplitting: true,
+    }),
+    react(),
+  ],
 })

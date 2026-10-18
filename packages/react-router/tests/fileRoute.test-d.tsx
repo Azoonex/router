@@ -17,7 +17,32 @@ const postRoute = createFileRoute('/_postLayout/posts/$postId_')()
 
 const protectedRoute = createFileRoute('/(auth)/protected')()
 
-declare module '../src/fileRoute' {
+const attachmentRoute = createFileRoute(
+  '/projects/$observationDocId/attachments/$driveId/$type/$variant/$name',
+)({
+  params: {
+    parse: ({ driveId, type, variant, name, ...rest }) => {
+      const blobId =
+        type === 'audio'
+          ? {
+              type: 'audio' as const,
+              variant: 'original' as const,
+              driveId,
+              name,
+            }
+          : {
+              type: 'photo' as const,
+              variant: variant as 'original' | 'preview' | 'thumbnail',
+              driveId,
+              name,
+            }
+
+      return { ...rest, ...blobId }
+    },
+  },
+})
+
+declare module '@tanstack/router-core' {
   interface FileRoutesByPath {
     '/': {
       preLoaderRoute: typeof indexRoute
@@ -68,6 +93,13 @@ declare module '../src/fileRoute' {
       fullPath: '/posts/$postId'
       path: '/$postId_'
     }
+    '/projects/$observationDocId/attachments/$driveId/$type/$variant/$name': {
+      preLoaderRoute: typeof attachmentRoute
+      parentRoute: typeof rootRoute
+      id: '/projects/$observationDocId/attachments/$driveId/$type/$variant/$name'
+      fullPath: '/projects/$observationDocId/attachments/$driveId/$type/$variant/$name'
+      path: '/projects/$observationDocId/attachments/$driveId/$type/$variant/$name'
+    }
   }
 }
 
@@ -99,4 +131,32 @@ test('when creating a folder group', () => {
   expectTypeOf<'/protected'>(protectedRoute.fullPath)
   expectTypeOf<'(auth)/protected'>(protectedRoute.path)
   expectTypeOf<'/protected'>(protectedRoute.id)
+})
+
+test('when file route params.parse returns a discriminated union', () => {
+  expectTypeOf(attachmentRoute.types.params).toEqualTypeOf<
+    | {
+        observationDocId: string
+        driveId: string
+        type: 'audio'
+        variant: 'original'
+        name: string
+      }
+    | {
+        observationDocId: string
+        driveId: string
+        type: 'photo'
+        variant: 'original' | 'preview' | 'thumbnail'
+        name: string
+      }
+  >()
+})
+
+test('when file route params.parse drops a path param', () => {
+  createFileRoute('/invoices/$invoiceId')({
+    params: {
+      // @ts-expect-error parsed params must keep path param keys
+      parse: () => ({}),
+    },
+  })
 })

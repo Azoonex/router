@@ -1,48 +1,56 @@
+'use client'
+
 import * as React from 'react'
-import { useLayoutEffect, usePrevious } from './utils'
+import { getLocationChangeInfo, trimPathRight } from '@tanstack/router-core'
+import { useLayoutEffect } from './utils'
 import { useRouter } from './useRouter'
-import { useRouterState } from './useRouterState'
-import { trimPathRight } from './path'
+import type { AnyRouter } from '@tanstack/router-core'
 
-export function Transitioner() {
+export function settleOwner(
+  owner: NonNullable<AnyRouter['_rendered']>,
+  rendered: boolean,
+) {
+  const settle = owner[1 /* settle */]
+  owner.length = 0
+  settle?.(rendered)
+}
+
+export function Transitioner({
+  t,
+}: {
+  t: React.Dispatch<React.SetStateAction<AnyRouter | undefined>>
+}) {
   const router = useRouter()
-  const mountLoadForRouter = React.useRef({ router, mounted: false })
-  const isLoading = useRouterState({
-    select: ({ isLoading }) => isLoading,
-  })
+  const acknowledgement = (router._rendered ??= [])
+  const mounted =
+    process.env.NODE_ENV !== 'production'
+      ? // eslint-disable-next-line react-hooks/rules-of-hooks
+        React.useRef(false)
+      : undefined
 
-  const [isTransitioning, setIsTransitioning] = React.useState(false)
-  // Track pending state changes
-  const hasPendingMatches = useRouterState({
-    select: (s) => s.matches.some((d) => d.status === 'pending'),
-    structuralSharing: true,
-  })
+  router.startTransition = (fn, expected) =>
+    new Promise((resolve) => {
+      settleOwner(acknowledgement, false)
+      acknowledgement.push(expected, resolve)
+      t(router)
+      React.startTransition(fn)
+    })
 
-  const previousIsLoading = usePrevious(isLoading)
-
-  const isAnyPending = isLoading || isTransitioning || hasPendingMatches
-  const previousIsAnyPending = usePrevious(isAnyPending)
-
-  const isPagePending = isLoading || hasPendingMatches
-  const previousIsPagePending = usePrevious(isPagePending)
-
-  if (!router.isServer) {
-    router.startReactTransition = (fn: () => void) => {
-      setIsTransitioning(true)
-      React.startTransition(() => {
-        fn()
-        setIsTransitioning(false)
-      })
-    }
-  }
-
-  // Subscribe to location changes
-  // and try to load the new location
-  React.useEffect(() => {
+  // Subscribe before canonicalizing so the initial URL has exactly one load.
+  useLayoutEffect(() => {
     const unsub = router.history.subscribe(router.load)
 
+    if (mounted?.current) {
+      return unsub
+    }
+    if (mounted) {
+      mounted.current = true
+    }
+
+    router.updateLatestLocation()
+    const location = router.latestLocation
     const nextLocation = router.buildLocation({
-      to: router.latestLocation.pathname,
+      to: location.pathname,
       search: true,
       params: true,
       hash: true,
@@ -50,111 +58,42 @@ export function Transitioner() {
       _includeValidateSearch: true,
     })
 
+    // Check if the current URL matches the canonical form.
+    // Compare publicHref (browser-facing URL) consistently with server
+    // canonicalization.
     if (
-      trimPathRight(router.latestLocation.href) !==
-      trimPathRight(nextLocation.href)
+      trimPathRight(location.publicHref) !==
+      trimPathRight(nextLocation.publicHref)
     ) {
-      router.commitLocation({ ...nextLocation, replace: true })
+      router.commitLocation({
+        ...nextLocation,
+        replace: true,
+        ignoreBlocker: true,
+      })
+      return unsub
     }
 
-    return () => {
-      unsub()
-    }
-  }, [router, router.history])
-
-  // Try to load the initial location
-  useLayoutEffect(() => {
+    const resolvedLocation = router.stores.resolvedLocation.get()
     if (
-      (typeof window !== 'undefined' && window.__TSR__?.dehydrated) ||
-      (mountLoadForRouter.current.router === router &&
-        mountLoadForRouter.current.mounted)
+      resolvedLocation?.href === location.href &&
+      resolvedLocation.state.__TSR_key === location.state.__TSR_key
     ) {
-      return
-    }
-    mountLoadForRouter.current = { router, mounted: true }
-
-    const tryLoad = async () => {
-      try {
-        await router.load()
-      } catch (err) {
-        console.error(err)
-      }
-    }
-
-    tryLoad()
-  }, [router])
-
-  useLayoutEffect(() => {
-    // The router was loading and now it's not
-    if (previousIsLoading && !isLoading) {
-      const toLocation = router.state.location
-      const fromLocation = router.state.resolvedLocation
-      const pathChanged = fromLocation.pathname !== toLocation.pathname
-      const hrefChanged = fromLocation.href !== toLocation.href
-
-      router.emit({
-        type: 'onLoad', // When the new URL has committed, when the new matches have been loaded into state.matches
-        fromLocation,
-        toLocation,
-        pathChanged,
-        hrefChanged,
-      })
-    }
-  }, [previousIsLoading, router, isLoading])
-
-  useLayoutEffect(() => {
-    // emit onBeforeRouteMount
-    if (previousIsPagePending && !isPagePending) {
-      const toLocation = router.state.location
-      const fromLocation = router.state.resolvedLocation
-      const pathChanged = fromLocation.pathname !== toLocation.pathname
-      const hrefChanged = fromLocation.href !== toLocation.href
-
-      router.emit({
-        type: 'onBeforeRouteMount',
-        fromLocation,
-        toLocation,
-        pathChanged,
-        hrefChanged,
-      })
-    }
-  }, [isPagePending, previousIsPagePending, router])
-
-  useLayoutEffect(() => {
-    // The router was pending and now it's not
-    if (previousIsAnyPending && !isAnyPending) {
-      const toLocation = router.state.location
-      const fromLocation = router.state.resolvedLocation
-      const pathChanged = fromLocation.pathname !== toLocation.pathname
-      const hrefChanged = fromLocation.href !== toLocation.href
-
-      router.emit({
-        type: 'onResolved',
-        fromLocation,
-        toLocation,
-        pathChanged,
-        hrefChanged,
-      })
-
-      router.__store.setState((s) => ({
-        ...s,
-        status: 'idle',
-        resolvedLocation: s.location,
-      }))
-
-      if (typeof document !== 'undefined' && (document as any).querySelector) {
-        const hashScrollIntoViewOptions =
-          router.state.location.state.__hashScrollIntoViewOptions ?? true
-
-        if (hashScrollIntoViewOptions && router.state.location.hash !== '') {
-          const el = document.getElementById(router.state.location.hash)
-          if (el) {
-            el.scrollIntoView(hashScrollIntoViewOptions)
-          }
+      acknowledgement.push(router.stores.matches.get(), (rendered) => {
+        if (rendered) {
+          router.emit({
+            type: 'onRendered',
+            ...getLocationChangeInfo(resolvedLocation, resolvedLocation),
+          })
         }
-      }
+      })
+    } else if (!router._tx) {
+      router.load({ sync: true }).catch(console.error)
     }
-  }, [isAnyPending, previousIsAnyPending, router])
+
+    return unsub
+    // `mounted` exists only in development and is a stable ref when present.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [router, router.history])
 
   return null
 }

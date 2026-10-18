@@ -1,5 +1,6 @@
+import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
-import { Link, createFileRoute, linkOptions } from '@tanstack/react-router'
+import { Link, linkOptions } from '@tanstack/react-router'
 
 export const Route = createFileRoute('/')({
   component: HomeComponent,
@@ -16,6 +17,8 @@ function HomeComponent() {
       </p>
       {(
         [
+          linkOptions({ to: '/issue-7040-source' }),
+          linkOptions({ to: '/issue-7040-target' }),
           linkOptions({ to: '/normal-page' }),
           linkOptions({ to: '/lazy-page' }),
           linkOptions({ to: '/virtual-page' }),

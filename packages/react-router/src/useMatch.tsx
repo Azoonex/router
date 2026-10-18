@@ -1,20 +1,71 @@
+'use client'
+
 import * as React from 'react'
-import invariant from 'tiny-invariant'
-import { useRouterState } from './useRouterState'
+import { useSelector } from '@tanstack/react-store'
+import { invariant, replaceEqualDeep } from '@tanstack/router-core'
+import { isServer } from '@tanstack/router-core/isServer'
 import { dummyMatchContext, matchContext } from './matchContext'
+import { useRouter } from './useRouter'
 import type {
   StructuralSharingOption,
   ValidateSelected,
 } from './structuralSharing'
-import type { AnyRouter, RegisteredRouter } from './router'
-import type { MakeRouteMatch, MakeRouteMatchUnion } from './Matches'
-import type { StrictOrFrom, ThrowOrOptional } from './utils'
+import type {
+  AnyRouter,
+  MakeRouteMatch,
+  MakeRouteMatchUnion,
+  RegisteredRouter,
+  StrictOrFrom,
+  ThrowConstraint,
+  ThrowOrOptional,
+} from '@tanstack/router-core'
+
+const dummyMatch = {}
+
+export function useStructuralSharing<
+  TRouter extends AnyRouter,
+  TSelected,
+  TStructuralSharing extends boolean,
+  TStoreSlice,
+  TSelectSlice = TStoreSlice,
+>(
+  opts:
+    | {
+        select?: (
+          slice: TSelectSlice,
+        ) => ValidateSelected<TRouter, TSelected, TStructuralSharing>
+        structuralSharing?: boolean
+      }
+    | undefined,
+  router: TRouter,
+): (
+  slice: TStoreSlice,
+) => ValidateSelected<TRouter, TSelected, TStructuralSharing> {
+  const previousResult =
+    // @ts-expect-error -- init to undefined, but without writing `undefined` to shave bytes
+    React.useRef<ValidateSelected<TRouter, TSelected, TStructuralSharing>>()
+
+  return (slice) => {
+    const selected = opts?.select
+      ? opts.select(slice as unknown as TSelectSlice)
+      : (slice as ValidateSelected<TRouter, TSelected, TStructuralSharing>)
+
+    if (opts?.structuralSharing ?? router.options.defaultStructuralSharing) {
+      return (previousResult.current = replaceEqualDeep(
+        previousResult.current,
+        selected,
+      ))
+    }
+
+    return selected
+  }
+}
 
 export interface UseMatchBaseOptions<
   TRouter extends AnyRouter,
   TFrom,
   TStrict extends boolean,
-  TThrow,
+  TThrow extends boolean,
   TSelected,
   TStructuralSharing extends boolean,
 > {
@@ -28,24 +79,25 @@ export type UseMatchRoute<out TFrom> = <
   TRouter extends AnyRouter = RegisteredRouter,
   TSelected = unknown,
   TStructuralSharing extends boolean = boolean,
+  TThrow extends boolean = true,
 >(
   opts?: UseMatchBaseOptions<
     TRouter,
     TFrom,
     true,
-    true,
+    TThrow,
     TSelected,
     TStructuralSharing
   > &
     StructuralSharingOption<TRouter, TSelected, TStructuralSharing>,
-) => UseMatchResult<TRouter, TFrom, true, TSelected>
+) => ThrowOrOptional<UseMatchResult<TRouter, TFrom, true, TSelected>, TThrow>
 
 export type UseMatchOptions<
   TRouter extends AnyRouter,
   TFrom extends string | undefined,
   TStrict extends boolean,
-  TSelected,
   TThrow extends boolean,
+  TSelected,
   TStructuralSharing extends boolean,
 > = StrictOrFrom<TRouter, TFrom, TStrict> &
   UseMatchBaseOptions<
@@ -69,11 +121,10 @@ export type UseMatchResult<
     : MakeRouteMatchUnion<TRouter>
   : TSelected
 
-type ThrowConstraint<
-  TStrict extends boolean,
-  TThrow extends boolean,
-> = TStrict extends false ? (TThrow extends true ? never : TThrow) : TThrow
-
+/**
+ * Read and select the nearest or targeted route match.
+ * @link https://tanstack.com/router/latest/docs/framework/react/api/router/useMatchHook
+ */
 export function useMatch<
   TRouter extends AnyRouter = RegisteredRouter,
   const TFrom extends string | undefined = undefined,
@@ -86,33 +137,60 @@ export function useMatch<
     TRouter,
     TFrom,
     TStrict,
-    TSelected,
     ThrowConstraint<TStrict, TThrow>,
+    TSelected,
     TStructuralSharing
   >,
 ): ThrowOrOptional<UseMatchResult<TRouter, TFrom, TStrict, TSelected>, TThrow> {
-  const nearestMatchId = React.useContext(
+  const router = useRouter<TRouter>()
+  const nearestRouteId = React.useContext(
     opts.from ? dummyMatchContext : matchContext,
   )
 
-  const matchSelection = useRouterState({
-    select: (state: any) => {
-      const match = state.matches.find((d: any) =>
-        opts.from ? opts.from === d.routeId : d.id === nearestMatchId,
-      )
-      invariant(
-        !((opts.shouldThrow ?? true) && !match),
-        `Could not find ${opts.from ? `an active match from "${opts.from}"` : 'a nearest match!'}`,
-      )
+  const routeId = opts.from ?? nearestRouteId
+  const matchStore = router.stores.getMatchStore(routeId!)
 
-      if (match === undefined) {
-        return undefined
+  if (isServer ?? router.isServer) {
+    const match = matchStore.get()
+    if (!match) {
+      if (opts.shouldThrow ?? true) {
+        if (process.env.NODE_ENV !== 'production') {
+          throw new Error(
+            `Invariant failed: Could not find ${opts.from ? `an active match from "${opts.from}"` : 'a nearest match!'}`,
+          )
+        }
+
+        invariant()
       }
 
-      return opts.select ? opts.select(match) : match
-    },
-    structuralSharing: opts.structuralSharing,
-  } as any)
+      return undefined as any
+    }
 
-  return matchSelection as any
+    return (opts.select ? opts.select(match as any) : match) as any
+  }
+
+  const selector =
+    // eslint-disable-next-line react-hooks/rules-of-hooks -- condition is static
+    useStructuralSharing(opts, router)
+
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- condition is static
+  const matchSelection = useSelector(matchStore, (match) =>
+    match ? selector(match as any) : dummyMatch,
+  )
+
+  if (matchSelection !== dummyMatch) {
+    return matchSelection as any
+  }
+
+  if (opts.shouldThrow ?? true) {
+    if (process.env.NODE_ENV !== 'production') {
+      throw new Error(
+        `Invariant failed: Could not find ${opts.from ? `an active match from "${opts.from}"` : 'a nearest match!'}`,
+      )
+    }
+
+    invariant()
+  }
+
+  return undefined as any
 }

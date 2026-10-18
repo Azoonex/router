@@ -18,7 +18,7 @@ import {
   useRouterState,
   useSearch,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import {
   QueryClient,
   QueryClientProvider,
@@ -37,6 +37,7 @@ import {
   postInvoice,
 } from './mockTodos'
 import type { Invoice } from './mockTodos'
+import './styles.css'
 
 //
 
@@ -132,8 +133,8 @@ function RootComponent() {
                 ['/', 'Home'],
                 ['/dashboard', 'Dashboard'],
                 ['/expensive', 'Expensive'],
-                ['/layout-a', 'Layout A'],
-                ['/layout-b', 'Layout B'],
+                ['/route-a', 'Pathless Layout A'],
+                ['/route-b', 'Pathless Layout B'],
                 ['/profile', 'Profile'],
                 ['/login', 'Login'],
               ] as const
@@ -209,13 +210,13 @@ function IndexComponent() {
   )
 }
 
-const dashboardRoute = createRoute({
+const dashboardLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: 'dashboard',
-  component: DashboardComponent,
+  component: DashboardLayoutComponent,
 })
 
-function DashboardComponent() {
+function DashboardLayoutComponent() {
   return (
     <>
       <div className="flex items-center border-b">
@@ -249,7 +250,7 @@ function DashboardComponent() {
 }
 
 const dashboardIndexRoute = createRoute({
-  getParentRoute: () => dashboardRoute,
+  getParentRoute: () => dashboardLayoutRoute,
   path: '/',
   loader: (opts) =>
     opts.context.queryClient.ensureQueryData(invoicesQueryOptions()),
@@ -270,15 +271,15 @@ function DashboardIndexComponent() {
   )
 }
 
-const invoicesRoute = createRoute({
-  getParentRoute: () => dashboardRoute,
+const invoicesLayoutRoute = createRoute({
+  getParentRoute: () => dashboardLayoutRoute,
   path: 'invoices',
   loader: (opts) =>
     opts.context.queryClient.ensureQueryData(invoicesQueryOptions()),
-  component: InvoicesComponent,
+  component: InvoicesLayoutComponent,
 })
 
-function InvoicesComponent() {
+function InvoicesLayoutComponent() {
   const invoicesQuery = useSuspenseQuery(invoicesQueryOptions())
   const invoices = invoicesQuery.data
   // const updateInvoiceMutation = useUpdateInvoiceMutation()
@@ -349,7 +350,7 @@ function InvoicesComponent() {
 }
 
 const invoicesIndexRoute = createRoute({
-  getParentRoute: () => invoicesRoute,
+  getParentRoute: () => invoicesLayoutRoute,
   path: '/',
   component: InvoicesIndexComponent,
 })
@@ -376,7 +377,7 @@ function InvoicesIndexComponent() {
           <InvoiceFields invoice={{} as Invoice} />
           <div>
             <button
-              className="bg-blue-500 rounded p-2 uppercase text-white font-black disabled:opacity-50"
+              className="bg-blue-500 rounded-sm p-2 uppercase text-white font-black disabled:opacity-50"
               disabled={createInvoiceMutation.status === 'pending'}
             >
               {createInvoiceMutation.status === 'pending' ? (
@@ -389,11 +390,11 @@ function InvoicesIndexComponent() {
             </button>
           </div>
           {createInvoiceMutation.status === 'success' ? (
-            <div className="inline-block px-2 py-1 rounded bg-green-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
+            <div className="inline-block px-2 py-1 rounded-sm bg-green-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
               Created!
             </div>
           ) : createInvoiceMutation.status === 'error' ? (
-            <div className="inline-block px-2 py-1 rounded bg-red-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
+            <div className="inline-block px-2 py-1 rounded-sm bg-red-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
               Failed to create.
             </div>
           ) : null}
@@ -404,7 +405,7 @@ function InvoicesIndexComponent() {
 }
 
 const invoiceRoute = createRoute({
-  getParentRoute: () => invoicesRoute,
+  getParentRoute: () => invoicesLayoutRoute,
   path: '$invoiceId',
   params: {
     parse: (params) => ({
@@ -487,7 +488,7 @@ function InvoiceComponent() {
                   setNotes(e.target.value)
                 }}
                 rows={5}
-                className="shadow w-full p-2 rounded"
+                className="shadow-sm w-full p-2 rounded-sm"
                 placeholder="Write some notes here..."
               />
               <div className="italic text-xs">
@@ -499,7 +500,7 @@ function InvoiceComponent() {
       </div>
       <div>
         <button
-          className="bg-blue-500 rounded p-2 uppercase text-white font-black disabled:opacity-50"
+          className="bg-blue-500 rounded-sm p-2 uppercase text-white font-black disabled:opacity-50"
           disabled={updateInvoiceMutation.status === 'pending'}
         >
           Save
@@ -508,11 +509,11 @@ function InvoiceComponent() {
       {updateInvoiceMutation.variables?.id === invoice.id ? (
         <div key={updateInvoiceMutation.submittedAt}>
           {updateInvoiceMutation.status === 'success' ? (
-            <div className="inline-block px-2 py-1 rounded bg-green-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
+            <div className="inline-block px-2 py-1 rounded-sm bg-green-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
               Saved!
             </div>
           ) : updateInvoiceMutation.status === 'error' ? (
-            <div className="inline-block px-2 py-1 rounded bg-red-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
+            <div className="inline-block px-2 py-1 rounded-sm bg-red-500 text-white animate-bounce [animation-iteration-count:2.5] [animation-duration:.3s]">
               Failed to save.
             </div>
           ) : null}
@@ -522,8 +523,8 @@ function InvoiceComponent() {
   )
 }
 
-const usersRoute = createRoute({
-  getParentRoute: () => dashboardRoute,
+const usersLayoutRoute = createRoute({
+  getParentRoute: () => dashboardLayoutRoute,
   path: 'users',
   validateSearch: z.object({
     usersView: z
@@ -548,10 +549,10 @@ const usersRoute = createRoute({
 })
 
 function UsersComponent() {
-  const navigate = useNavigate({ from: usersRoute.fullPath })
-  const { usersView } = usersRoute.useSearch()
+  const navigate = useNavigate({ from: usersLayoutRoute.fullPath })
+  const { usersView } = usersLayoutRoute.useSearch()
   const usersQuery = useSuspenseQuery(
-    usersQueryOptions(usersRoute.useLoaderDeps()),
+    usersQueryOptions(usersLayoutRoute.useLoaderDeps()),
   )
   const users = usersQuery.data
   const sortBy = usersView?.sortBy ?? 'name'
@@ -618,7 +619,7 @@ function UsersComponent() {
           <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as UsersViewSortBy)}
-            className="flex-1 border p-1 px-2 rounded"
+            className="flex-1 border p-1 px-2 rounded-sm"
           >
             {['name', 'id', 'email'].map((d) => {
               return <option key={d} value={d} children={d} />
@@ -631,7 +632,7 @@ function UsersComponent() {
             value={filterDraft}
             onChange={(e) => setFilterDraft(e.target.value)}
             placeholder="Search Names..."
-            className="min-w-0 flex-1 border p-1 px-2 rounded"
+            className="min-w-0 flex-1 border p-1 px-2 rounded-sm"
           />
         </div>
         {filteredUsers.map((user) => {
@@ -670,7 +671,7 @@ function UsersComponent() {
 }
 
 const usersIndexRoute = createRoute({
-  getParentRoute: () => usersRoute,
+  getParentRoute: () => usersLayoutRoute,
   path: '/',
   component: UsersIndexComponent,
 })
@@ -700,7 +701,7 @@ function UsersIndexComponent() {
 }
 
 const userRoute = createRoute({
-  getParentRoute: () => usersRoute,
+  getParentRoute: () => usersLayoutRoute,
   path: 'user',
   validateSearch: z.object({
     userId: z.number(),
@@ -737,7 +738,7 @@ const expensiveRoute = createRoute({
   component: lazyRouteComponent(() => import('./Expensive')),
 })
 
-const authRoute = createRoute({
+const authPathlessLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
   id: 'auth',
   // Before loading, authenticate the user via our auth context
@@ -764,7 +765,7 @@ const authRoute = createRoute({
 })
 
 const profileRoute = createRoute({
-  getParentRoute: () => authRoute,
+  getParentRoute: () => authPathlessLayoutRoute,
   path: 'profile',
   component: ProfileComponent,
 })
@@ -818,7 +819,7 @@ function LoginComponent() {
       <div className="h-2" />
       <button
         onClick={() => auth.logout()}
-        className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded"
+        className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded-sm"
       >
         Log out
       </button>
@@ -833,11 +834,11 @@ function LoginComponent() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
-          className="border p-1 px-2 rounded"
+          className="border p-1 px-2 rounded-sm"
         />
         <button
           onClick={() => auth.logout()}
-          className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded"
+          className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded-sm"
         >
           Login
         </button>
@@ -846,61 +847,61 @@ function LoginComponent() {
   )
 }
 
-const layoutRoute = createRoute({
+const pathlessLayoutRoute = createRoute({
   getParentRoute: () => rootRoute,
-  id: 'layout',
-  component: LayoutComponent,
+  id: 'pathlessLayout',
+  component: PathlessLayoutComponent,
 })
 
-function LayoutComponent() {
+function PathlessLayoutComponent() {
   return (
     <div>
-      <div>Layout</div>
+      <div>Pathless Layout</div>
       <hr />
       <Outlet />
     </div>
   )
 }
 
-const layoutARoute = createRoute({
-  getParentRoute: () => layoutRoute,
-  path: 'layout-a',
-  component: LayoutAComponent,
+const pathlessLayoutARoute = createRoute({
+  getParentRoute: () => pathlessLayoutRoute,
+  path: 'route-a',
+  component: PathlessLayoutAComponent,
 })
 
-function LayoutAComponent() {
+function PathlessLayoutAComponent() {
   return (
     <div>
-      <div>Layout A</div>
+      <div>I'm A</div>
     </div>
   )
 }
 
-const layoutBRoute = createRoute({
-  getParentRoute: () => layoutRoute,
-  path: 'layout-b',
-  component: LayoutBComponent,
+const pathlessLayoutBRoute = createRoute({
+  getParentRoute: () => pathlessLayoutRoute,
+  path: 'route-b',
+  component: PathlessLayoutBComponent,
 })
 
-function LayoutBComponent() {
+function PathlessLayoutBComponent() {
   return (
     <div>
-      <div>Layout B</div>
+      <div>i"m B</div>
     </div>
   )
 }
 
 const routeTree = rootRoute.addChildren([
   indexRoute,
-  dashboardRoute.addChildren([
+  dashboardLayoutRoute.addChildren([
     dashboardIndexRoute,
-    invoicesRoute.addChildren([invoicesIndexRoute, invoiceRoute]),
-    usersRoute.addChildren([usersIndexRoute, userRoute]),
+    invoicesLayoutRoute.addChildren([invoicesIndexRoute, invoiceRoute]),
+    usersLayoutRoute.addChildren([usersIndexRoute, userRoute]),
   ]),
   expensiveRoute,
-  authRoute.addChildren([profileRoute]),
+  authPathlessLayoutRoute.addChildren([profileRoute]),
   loginRoute,
-  layoutRoute.addChildren([layoutARoute, layoutBRoute]),
+  pathlessLayoutRoute.addChildren([pathlessLayoutARoute, pathlessLayoutBRoute]),
 ])
 
 const queryClient = new QueryClient()
@@ -921,6 +922,7 @@ const router = createRouter({
   // Since we're using React Query, we don't want loader calls to ever be stale
   // This will ensure that the loader is always called when the route is preloaded or visited
   defaultPreloadStaleTime: 0,
+  scrollRestoration: true,
 })
 
 declare module '@tanstack/react-router' {
@@ -950,11 +952,11 @@ function App() {
 
   return (
     <>
-      <div className="text-xs fixed w-52 shadow-md shadow-black/20 rounded bottom-2 left-2 bg-white dark:bg-gray-800 bg-opacity-75 border-b flex flex-col gap-1 flex-wrap items-left divide-y">
+      <div className="text-xs fixed w-52 shadow-md shadow-black/20 rounded-sm bottom-2 left-2 bg-white dark:bg-gray-800 bg-opacity-75 border-b flex flex-col gap-1 flex-wrap items-left divide-y">
         <div className="p-2 space-y-2">
           <div className="flex gap-2">
             <button
-              className="bg-blue-500 text-white rounded p-1 px-2"
+              className="bg-blue-500 text-white rounded-sm p-1 px-2"
               onClick={() => {
                 setLoaderDelay(150)
               }}
@@ -962,7 +964,7 @@ function App() {
               Fast
             </button>
             <button
-              className="bg-blue-500 text-white rounded p-1 px-2"
+              className="bg-blue-500 text-white rounded-sm p-1 px-2"
               onClick={() => {
                 setLoaderDelay(500)
               }}
@@ -970,7 +972,7 @@ function App() {
               Fast 3G
             </button>
             <button
-              className="bg-blue-500 text-white rounded p-1 px-2"
+              className="bg-blue-500 text-white rounded-sm p-1 px-2"
               onClick={() => {
                 setLoaderDelay(2000)
               }}
@@ -994,7 +996,7 @@ function App() {
         <div className="p-2 space-y-2">
           <div className="flex gap-2">
             <button
-              className="bg-blue-500 text-white rounded p-1 px-2"
+              className="bg-blue-500 text-white rounded-sm p-1 px-2"
               onClick={() => {
                 setPendingMs(1000)
                 setPendingMinMs(500)
@@ -1058,7 +1060,7 @@ function InvoiceFields({
           name="title"
           defaultValue={invoice.title}
           placeholder="Invoice Title"
-          className="border border-opacity-50 rounded p-2 w-full"
+          className="border border-opacity-50 rounded-sm p-2 w-full"
           disabled={disabled}
         />
       </h2>
@@ -1068,7 +1070,7 @@ function InvoiceFields({
           defaultValue={invoice.body}
           rows={6}
           placeholder="Invoice Body..."
-          className="border border-opacity-50 p-2 rounded w-full"
+          className="border border-opacity-50 p-2 rounded-sm w-full"
           disabled={disabled}
         />
       </div>
@@ -1088,7 +1090,7 @@ function Spinner({ show, wait }: { show?: boolean; wait?: `delay-${number}` }) {
     <div
       className={`inline-block animate-spin px-3 transition ${
         (show ?? true)
-          ? `opacity-1 duration-500 ${wait ?? 'delay-300'}`
+          ? `opacity-100 duration-500 ${wait ?? 'delay-300'}`
           : 'duration-500 opacity-0 delay-0'
       }`}
     >

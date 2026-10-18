@@ -1,6 +1,13 @@
-import * as React from 'react'
-import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import {
+  HeadContent,
+  Link,
+  Outlet,
+  createRootRoute,
+  useCanGoBack,
+  useRouter,
+  useRouterState,
+} from '@tanstack/react-router'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -15,9 +22,23 @@ export const Route = createRootRoute({
 })
 
 function RootComponent() {
+  const router = useRouter()
+  const canGoBack = useCanGoBack()
+  // test useRouterState doesn't crash client side navigation
+  const _state = useRouterState()
+
   return (
     <>
-      <div className="p-2 flex gap-2 text-lg border-b">
+      <HeadContent />
+      <div className="flex gap-2 p-2 text-lg border-b">
+        <button
+          data-testid="back-button"
+          disabled={!canGoBack}
+          onClick={() => router.history.back()}
+          className={!canGoBack ? 'line-through' : undefined}
+        >
+          Back
+        </button>{' '}
         <Link
           to="/"
           activeProps={{
@@ -102,6 +123,22 @@ function RootComponent() {
           redirect
         </Link>{' '}
         <Link
+          to="/relative"
+          activeProps={{
+            className: 'font-bold',
+          }}
+        >
+          relative routing
+        </Link>{' '}
+        <Link
+          to="/대한민국"
+          activeProps={{
+            className: 'font-bold',
+          }}
+        >
+          unicode path
+        </Link>{' '}
+        <Link
           // @ts-expect-error
           to="/this-route-does-not-exist"
           activeProps={{
@@ -109,6 +146,33 @@ function RootComponent() {
           }}
         >
           This Route Does Not Exist
+        </Link>{' '}
+        <Link
+          to="/masks"
+          data-testid="link-to-masks"
+          activeProps={{
+            className: 'font-bold',
+          }}
+        >
+          Masks
+        </Link>{' '}
+        <Link
+          to="/pathless-layout"
+          data-testid="link-to-pathless-layout"
+          activeProps={{
+            className: 'font-bold',
+          }}
+        >
+          Pathless Layout
+        </Link>{' '}
+        <Link
+          to="/fullpath-test"
+          data-testid="link-to-fullpath-test"
+          activeProps={{
+            className: 'font-bold',
+          }}
+        >
+          FullPath Test
         </Link>
       </div>
       <hr />

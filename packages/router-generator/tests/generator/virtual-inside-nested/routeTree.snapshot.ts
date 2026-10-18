@@ -8,111 +8,51 @@
 // You should NOT make any changes in this file as it will be overwritten.
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
-// Import Routes
+import { Route as rootRouteImport } from './routes/__root'
+import { Route as IndexRouteImport } from './routes/index'
+import { Route as FooBarRouteImport } from './routes/foo/bar'
+import { Route as FooBarHomeRouteImport } from './routes/foo/bar/home'
+import { Route as FooBarDetailsRouteImport } from './routes/foo/bar/details'
 
-import { Route as rootRoute } from './routes/__root'
-import { Route as IndexImport } from './routes/index'
-import { Route as FooBarImport } from './routes/foo/bar'
-import { Route as fooBarDetailsImport } from './routes/foo/bar/details'
-import { Route as fooBarHomeImport } from './routes/foo/bar/home'
-
-// Create/Update Routes
-
-const IndexRoute = IndexImport.update({
+const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const FooBarRoute = FooBarImport.update({
+const FooBarRoute = FooBarRouteImport.update({
   id: '/foo/bar',
   path: '/foo/bar',
-  getParentRoute: () => rootRoute,
+  getParentRoute: () => rootRouteImport,
 } as any)
-
-const fooBarDetailsRoute = fooBarDetailsImport.update({
+const FooBarHomeRoute = FooBarHomeRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => FooBarRoute,
+} as any)
+const FooBarDetailsRoute = FooBarDetailsRouteImport.update({
   id: '/$id',
   path: '/$id',
   getParentRoute: () => FooBarRoute,
 } as any)
 
-const fooBarHomeRoute = fooBarHomeImport.update({
-  id: '/',
-  path: '/',
-  getParentRoute: () => FooBarRoute,
-} as any)
-
-// Populate the FileRoutesByPath interface
-
-declare module '@tanstack/react-router' {
-  interface FileRoutesByPath {
-    '/': {
-      id: '/'
-      path: '/'
-      fullPath: '/'
-      preLoaderRoute: typeof IndexImport
-      parentRoute: typeof rootRoute
-    }
-    '/foo/bar': {
-      id: '/foo/bar'
-      path: '/foo/bar'
-      fullPath: '/foo/bar'
-      preLoaderRoute: typeof FooBarImport
-      parentRoute: typeof rootRoute
-    }
-    '/foo/bar/': {
-      id: '/foo/bar/'
-      path: '/'
-      fullPath: '/foo/bar/'
-      preLoaderRoute: typeof fooBarHomeImport
-      parentRoute: typeof FooBarImport
-    }
-    '/foo/bar/$id': {
-      id: '/foo/bar/$id'
-      path: '/$id'
-      fullPath: '/foo/bar/$id'
-      preLoaderRoute: typeof fooBarDetailsImport
-      parentRoute: typeof FooBarImport
-    }
-  }
-}
-
-// Create and export the route tree
-
-interface FooBarRouteChildren {
-  fooBarHomeRoute: typeof fooBarHomeRoute
-  fooBarDetailsRoute: typeof fooBarDetailsRoute
-}
-
-const FooBarRouteChildren: FooBarRouteChildren = {
-  fooBarHomeRoute: fooBarHomeRoute,
-  fooBarDetailsRoute: fooBarDetailsRoute,
-}
-
-const FooBarRouteWithChildren =
-  FooBarRoute._addFileChildren(FooBarRouteChildren)
-
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/foo/bar': typeof FooBarRouteWithChildren
-  '/foo/bar/': typeof fooBarHomeRoute
-  '/foo/bar/$id': typeof fooBarDetailsRoute
+  '/foo/bar/': typeof FooBarHomeRoute
+  '/foo/bar/$id': typeof FooBarDetailsRoute
 }
-
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
-  '/foo/bar': typeof fooBarHomeRoute
-  '/foo/bar/$id': typeof fooBarDetailsRoute
+  '/foo/bar': typeof FooBarHomeRoute
+  '/foo/bar/$id': typeof FooBarDetailsRoute
 }
-
 export interface FileRoutesById {
-  __root__: typeof rootRoute
+  __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/foo/bar': typeof FooBarRouteWithChildren
-  '/foo/bar/': typeof fooBarHomeRoute
-  '/foo/bar/$id': typeof fooBarDetailsRoute
+  '/foo/bar/': typeof FooBarHomeRoute
+  '/foo/bar/$id': typeof FooBarDetailsRoute
 }
-
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths: '/' | '/foo/bar' | '/foo/bar/' | '/foo/bar/$id'
@@ -121,49 +61,61 @@ export interface FileRouteTypes {
   id: '__root__' | '/' | '/foo/bar' | '/foo/bar/' | '/foo/bar/$id'
   fileRoutesById: FileRoutesById
 }
-
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   FooBarRoute: typeof FooBarRouteWithChildren
 }
 
+declare module '@tanstack/react-router' {
+  interface FileRoutesByPath {
+    '/': {
+      id: '/'
+      path: '/'
+      fullPath: '/'
+      preLoaderRoute: typeof IndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/foo/bar': {
+      id: '/foo/bar'
+      path: '/foo/bar'
+      fullPath: '/foo/bar'
+      preLoaderRoute: typeof FooBarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/foo/bar/': {
+      id: '/foo/bar/'
+      path: '/'
+      fullPath: '/foo/bar/'
+      preLoaderRoute: typeof FooBarHomeRouteImport
+      parentRoute: typeof FooBarRoute
+    }
+    '/foo/bar/$id': {
+      id: '/foo/bar/$id'
+      path: '/$id'
+      fullPath: '/foo/bar/$id'
+      preLoaderRoute: typeof FooBarDetailsRouteImport
+      parentRoute: typeof FooBarRoute
+    }
+  }
+}
+
+interface FooBarRouteChildren {
+  FooBarHomeRoute: typeof FooBarHomeRoute
+  FooBarDetailsRoute: typeof FooBarDetailsRoute
+}
+
+const FooBarRouteChildren: FooBarRouteChildren = {
+  FooBarHomeRoute: FooBarHomeRoute,
+  FooBarDetailsRoute: FooBarDetailsRoute,
+}
+
+const FooBarRouteWithChildren =
+  FooBarRoute._addFileChildren(FooBarRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   FooBarRoute: FooBarRouteWithChildren,
 }
-
-export const routeTree = rootRoute
+export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-/* ROUTE_MANIFEST_START
-{
-  "routes": {
-    "__root__": {
-      "filePath": "__root.tsx",
-      "children": [
-        "/",
-        "/foo/bar"
-      ]
-    },
-    "/": {
-      "filePath": "index.tsx"
-    },
-    "/foo/bar": {
-      "filePath": "foo/bar.tsx",
-      "children": [
-        "/foo/bar/",
-        "/foo/bar/$id"
-      ]
-    },
-    "/foo/bar/": {
-      "filePath": "foo/bar/home.tsx",
-      "parent": "/foo/bar"
-    },
-    "/foo/bar/$id": {
-      "filePath": "foo/bar/details.tsx",
-      "parent": "/foo/bar"
-    }
-  }
-}
-ROUTE_MANIFEST_END */

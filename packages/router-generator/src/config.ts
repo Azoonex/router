@@ -2,36 +2,33 @@ import path from 'node:path'
 import { existsSync, readFileSync } from 'node:fs'
 import { z } from 'zod'
 import { virtualRootRouteSchema } from './filesystem/virtual/config'
+import type { GeneratorPlugin } from './plugin/types'
 
-const defaultTemplate = {
-  routeTemplate: [
-    '%%tsrImports%%',
-    '\n\n',
-    '%%tsrExportStart%%{\n component: RouteComponent\n }%%tsrExportEnd%%\n\n',
-    'function RouteComponent() { return <div>Hello "%%tsrPath%%"!</div> };\n',
-  ].join(''),
-  apiTemplate: [
-    'import { json } from "@tanstack/start";\n',
-    '%%tsrImports%%',
-    '\n\n',
-    '%%tsrExportStart%%{ GET: ({ request, params }) => { return json({ message:\'Hello "%%tsrPath%%"!\' }) }}%%tsrExportEnd%%\n',
-  ].join(''),
-}
+const tokenJsonRegexSchema = z.object({
+  regex: z.string(),
+  flags: z.string().optional(),
+})
 
-export const configSchema = z.object({
+const tokenMatcherSchema = z.union([
+  z.string(),
+  z.instanceof(RegExp),
+  tokenJsonRegexSchema,
+])
+
+export type TokenMatcherJson = string | z.infer<typeof tokenJsonRegexSchema>
+
+export type TokenMatcher = z.infer<typeof tokenMatcherSchema>
+
+export const baseConfigSchema = z.object({
+  target: z.enum(['react', 'solid', 'vue']).optional().default('react'),
   virtualRouteConfig: virtualRootRouteSchema.or(z.string()).optional(),
   routeFilePrefix: z.string().optional(),
   routeFileIgnorePrefix: z.string().optional().default('-'),
   routeFileIgnorePattern: z.string().optional(),
   routesDirectory: z.string().optional().default('./src/routes'),
-  generatedRouteTree: z.string().optional().default('./src/routeTree.gen.ts'),
   quoteStyle: z.enum(['single', 'double']).optional().default('single'),
   semicolons: z.boolean().optional().default(false),
-  disableTypes: z.boolean().optional().default(false),
-  addExtensions: z.boolean().optional().default(false),
   disableLogging: z.boolean().optional().default(false),
-  disableManifestGeneration: z.boolean().optional().default(false),
-  apiBase: z.string().optional().default('/api'),
   routeTreeFileHeader: z
     .array(z.string())
     .optional()
@@ -40,29 +37,48 @@ export const configSchema = z.object({
       '// @ts-nocheck',
       '// noinspection JSUnusedGlobalSymbols',
     ]),
-  routeTreeFileFooter: z.array(z.string()).optional().default([]),
-  autoCodeSplitting: z.boolean().optional(),
-  indexToken: z.string().optional().default('index'),
-  routeToken: z.string().optional().default('route'),
+  indexToken: tokenMatcherSchema.optional().default('index'),
+  routeToken: tokenMatcherSchema.optional().default('route'),
   pathParamsAllowedCharacters: z
     .array(z.enum([';', ':', '@', '&', '=', '+', '$', ',']))
     .optional(),
+})
+
+export type BaseConfig = z.infer<typeof baseConfigSchema>
+
+export const configSchema = baseConfigSchema.extend({
+  generatedRouteTree: z.string().optional().default('./src/routeTree.gen.ts'),
+  disableTypes: z.boolean().optional().default(false),
+  addExtensions: z
+    .union([z.boolean(), z.string()])
+    .optional()
+    .default(false)
+    .transform((v) =>
+      typeof v === 'string' ? (v.startsWith('.') ? v : `.${v}`) : v,
+    ),
+  enableRouteTreeFormatting: z.boolean().optional().default(true),
+  routeTreeFileFooter: z
+    .union([
+      z.array(z.string()).optional().default([]),
+      z.custom<() => Array<string>>((value) => typeof value === 'function'),
+    ])
+    .optional(),
+  autoCodeSplitting: z.boolean().optional(),
   customScaffolding: z
     .object({
-      routeTemplate: z
-        .string()
-        .optional()
-        .default(defaultTemplate.routeTemplate),
-      apiTemplate: z.string().optional().default(defaultTemplate.apiTemplate),
+      routeTemplate: z.string().optional(),
+      lazyRouteTemplate: z.string().optional(),
     })
-    .optional()
-    .default(defaultTemplate),
+    .optional(),
   experimental: z
     .object({
-      // TODO: Remove this option in the next major release (v2).
+      // TODO: This has been made stable and is now "autoCodeSplitting". Remove in next major version.
       enableCodeSplitting: z.boolean().optional(),
     })
     .optional(),
+  plugins: z.array(z.custom<GeneratorPlugin>()).optional(),
+  tmpDir: z.string().optional().default(''),
+  importRoutesUsingAbsolutePaths: z.boolean().optional().default(false),
 })
 
 export type Config = z.infer<typeof configSchema>
@@ -88,10 +104,16 @@ export function getConfig(
   let config: Config
 
   if (exists) {
-    config = configSchema.parse({
-      ...JSON.parse(readFileSync(configFilePathJson, 'utf-8')),
+    // Parse file config (allows JSON regex-object form)
+    const fileConfigRaw = JSON.parse(readFileSync(configFilePathJson, 'utf-8'))
+
+    // Merge raw configs (inline overrides file), then parse once to apply defaults
+    // This ensures file config values aren't overwritten by inline defaults
+    const merged = {
+      ...fileConfigRaw,
       ...inlineConfig,
-    })
+    }
+    config = configSchema.parse(merged)
   } else {
     config = configSchema.parse(inlineConfig)
   }
@@ -130,6 +152,24 @@ export function getConfig(
     }
   }
 
+  const resolveTmpDir = (dir: string | Array<string>) => {
+    if (Array.isArray(dir)) {
+      dir = path.join(...dir)
+    }
+    if (!path.isAbsolute(dir)) {
+      dir = path.resolve(process.cwd(), dir)
+    }
+    return dir
+  }
+
+  if (config.tmpDir) {
+    config.tmpDir = resolveTmpDir(config.tmpDir)
+  } else if (process.env.TSR_TMP_DIR) {
+    config.tmpDir = resolveTmpDir(process.env.TSR_TMP_DIR)
+  } else {
+    config.tmpDir = resolveTmpDir(['.tanstack', 'tmp'])
+  }
+
   validateConfig(config)
   return config
 }
@@ -146,7 +186,9 @@ ERROR: The "experimental.enableCodeSplitting" flag has been made stable and is n
     throw new Error(message)
   }
 
-  if (config.indexToken === config.routeToken) {
+  // Check that indexToken and routeToken are not identical
+  // Works for strings, RegExp, and JSON regex objects
+  if (areTokensEqual(config.indexToken, config.routeToken)) {
     throw new Error(
       `The "indexToken" and "routeToken" options must be different.`,
     )
@@ -162,4 +204,33 @@ ERROR: The "experimental.enableCodeSplitting" flag has been made stable and is n
   }
 
   return config
+}
+
+/**
+ * Compares two token matchers for equality.
+ * Handles strings, RegExp instances, and JSON regex objects.
+ */
+function areTokensEqual(a: TokenMatcher, b: TokenMatcher): boolean {
+  // Both strings
+  if (typeof a === 'string' && typeof b === 'string') {
+    return a === b
+  }
+
+  // Both RegExp instances
+  if (a instanceof RegExp && b instanceof RegExp) {
+    return a.source === b.source && a.flags === b.flags
+  }
+
+  // Both JSON regex objects
+  if (
+    typeof a === 'object' &&
+    'regex' in a &&
+    typeof b === 'object' &&
+    'regex' in b
+  ) {
+    return a.regex === b.regex && (a.flags ?? '') === (b.flags ?? '')
+  }
+
+  // Mixed types - not equal
+  return false
 }

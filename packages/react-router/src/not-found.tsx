@@ -1,46 +1,56 @@
 import * as React from 'react'
+import { isNotFound } from '@tanstack/router-core'
+import { isServer } from '@tanstack/router-core/isServer'
+import { useSelector } from '@tanstack/react-store'
 import { CatchBoundary } from './CatchBoundary'
-import { useRouterState } from './useRouterState'
+import { useRouter } from './useRouter'
 import type { ErrorInfo } from 'react'
-import type { RegisteredRouter } from './router'
-import type { RouteIds } from './routeInfo'
-
-export type NotFoundError = {
-  /**
-    @deprecated
-    Use `routeId: rootRouteId` instead
-  */
-  global?: boolean
-  /**
-    @private
-    Do not use this. It's used internally to indicate a path matching error
-  */
-  _global?: boolean
-  data?: any
-  throw?: boolean
-  routeId?: RouteIds<RegisteredRouter['routeTree']>
-  headers?: HeadersInit
-}
-
-export function notFound(options: NotFoundError = {}) {
-  ;(options as any).isNotFound = true
-  if (options.throw) throw options
-  return options
-}
-
-export function isNotFound(obj: any): obj is NotFoundError {
-  return !!obj?.isNotFound
-}
+import type { NotFoundError } from '@tanstack/router-core'
 
 export function CatchNotFound(props: {
   fallback?: (error: NotFoundError) => React.ReactElement
-  onCatch?: (error: Error, errorInfo: ErrorInfo) => void
+  onCatch?: (error: NotFoundError, errorInfo: ErrorInfo) => void
   children: React.ReactNode
 }) {
+  const router = useRouter()
+
+  if (isServer ?? router.isServer) {
+    const pathname = router.stores.location.get().pathname
+    const status = router.stores.status.get()
+    const resetKey = `not-found-${pathname}-${status}`
+
+    return (
+      <CatchBoundary
+        getResetKey={() => resetKey}
+        onCatch={(error, errorInfo) => {
+          if (isNotFound(error)) {
+            props.onCatch?.(error, errorInfo)
+          } else {
+            throw error
+          }
+        }}
+        errorComponent={({ error }) => {
+          if (isNotFound(error)) {
+            return props.fallback?.(error)
+          } else {
+            throw error
+          }
+        }}
+      >
+        {props.children}
+      </CatchBoundary>
+    )
+  }
+
   // TODO: Some way for the user to programmatically reset the not-found boundary?
-  const resetKey = useRouterState({
-    select: (s) => `not-found-${s.location.pathname}-${s.status}`,
-  })
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- condition is static
+  const pathname = useSelector(
+    router.stores.location,
+    (location) => location.pathname,
+  )
+  // eslint-disable-next-line react-hooks/rules-of-hooks -- condition is static
+  const status = useSelector(router.stores.status)
+  const resetKey = `not-found-${pathname}-${status}`
 
   return (
     <CatchBoundary
@@ -52,7 +62,7 @@ export function CatchNotFound(props: {
           throw error
         }
       }}
-      errorComponent={({ error }: { error: Error }) => {
+      errorComponent={({ error }) => {
         if (isNotFound(error)) {
           return props.fallback?.(error)
         } else {

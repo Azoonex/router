@@ -1,20 +1,32 @@
 import React from 'react'
-import '@testing-library/jest-dom/vitest'
-import { afterEach, describe, expect, test, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, test, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 
 import { z } from 'zod'
 import {
   RouterProvider,
+  createBrowserHistory,
+  createMemoryHistory,
   createRootRoute,
   createRoute,
   createRouter,
   useBlocker,
   useNavigate,
 } from '../src'
+import type { RouterHistory } from '../src'
+
+let history: RouterHistory
+
+beforeEach(() => {
+  history = createBrowserHistory()
+  expect(window.location.pathname).toBe('/')
+})
 
 afterEach(() => {
+  history.destroy()
   window.history.replaceState(null, 'root', '/')
+  vi.clearAllMocks()
+  vi.resetAllMocks()
   cleanup()
 })
 
@@ -28,11 +40,11 @@ describe('useBlocker', () => {
       useBlocker({ shouldBlockFn: () => false })
 
       return (
-        <React.Fragment>
+        <>
           <h1>Index</h1>
           <button onClick={() => navigate({ to: '/' })}>Index</button>
           <button onClick={() => navigate({ to: '/posts' })}>Posts</button>
-        </React.Fragment>
+        </>
       )
     }
 
@@ -47,15 +59,16 @@ describe('useBlocker', () => {
       path: '/posts',
       component: () => {
         return (
-          <React.Fragment>
+          <>
             <h1>Posts</h1>
-          </React.Fragment>
+          </>
         )
       },
     })
 
     const router = createRouter({
       routeTree: rootRoute.addChildren([indexRoute, postsRoute]),
+      history,
     })
 
     render(<RouterProvider router={router} />)
@@ -80,11 +93,11 @@ describe('useBlocker', () => {
       useBlocker({ shouldBlockFn: () => true, disabled: true })
 
       return (
-        <React.Fragment>
+        <>
           <h1>Index</h1>
           <button onClick={() => navigate({ to: '/' })}>Index</button>
           <button onClick={() => navigate({ to: '/posts' })}>Posts</button>
-        </React.Fragment>
+        </>
       )
     }
 
@@ -99,15 +112,16 @@ describe('useBlocker', () => {
       path: '/posts',
       component: () => {
         return (
-          <React.Fragment>
+          <>
             <h1>Posts</h1>
-          </React.Fragment>
+          </>
         )
       },
     })
 
     const router = createRouter({
       routeTree: rootRoute.addChildren([indexRoute, postsRoute]),
+      history,
     })
 
     render(<RouterProvider router={router} />)
@@ -132,11 +146,11 @@ describe('useBlocker', () => {
       useBlocker({ shouldBlockFn: () => true })
 
       return (
-        <React.Fragment>
+        <>
           <h1>Index</h1>
           <button onClick={() => navigate({ to: '/' })}>Index</button>
           <button onClick={() => navigate({ to: '/posts' })}>Posts</button>
-        </React.Fragment>
+        </>
       )
     }
 
@@ -151,15 +165,16 @@ describe('useBlocker', () => {
       path: '/posts',
       component: () => {
         return (
-          <React.Fragment>
+          <>
             <h1>Posts</h1>
-          </React.Fragment>
+          </>
         )
       },
     })
 
     const router = createRouter({
       routeTree: rootRoute.addChildren([indexRoute, postsRoute]),
+      history,
     })
 
     render(<RouterProvider router={router} />)
@@ -186,13 +201,13 @@ describe('useBlocker', () => {
       useBlocker({ shouldBlockFn })
 
       return (
-        <React.Fragment>
+        <>
           <h1>Index</h1>
           <button onClick={() => navigate({ to: '/' })}>Index</button>
           <button onClick={() => navigate({ to: '/posts', replace: true })}>
             Posts
           </button>
-        </React.Fragment>
+        </>
       )
     }
 
@@ -207,15 +222,16 @@ describe('useBlocker', () => {
       path: '/posts',
       component: () => {
         return (
-          <React.Fragment>
+          <>
             <h1>Posts</h1>
-          </React.Fragment>
+          </>
         )
       },
     })
 
     const router = createRouter({
       routeTree: rootRoute.addChildren([indexRoute, postsRoute]),
+      history,
     })
 
     render(<RouterProvider router={router} />)
@@ -260,7 +276,7 @@ describe('useBlocker', () => {
       useBlocker({ shouldBlockFn })
 
       return (
-        <React.Fragment>
+        <>
           <h1>Index</h1>
           <button onClick={() => navigate({ to: '/' })}>Index</button>
           <button
@@ -274,7 +290,7 @@ describe('useBlocker', () => {
           >
             Posts
           </button>
-        </React.Fragment>
+        </>
       )
     }
 
@@ -293,15 +309,16 @@ describe('useBlocker', () => {
       path: '/posts/$postId',
       component: () => {
         return (
-          <React.Fragment>
+          <>
             <h1>Posts</h1>
-          </React.Fragment>
+          </>
         )
       },
     })
 
     const router = createRouter({
       routeTree: rootRoute.addChildren([indexRoute, postsRoute]),
+      history,
     })
 
     render(<RouterProvider router={router} />)
@@ -351,14 +368,14 @@ describe('useBlocker', () => {
       })
 
       return (
-        <React.Fragment>
+        <>
           <h1>Index</h1>
           <button onClick={() => navigate({ to: '/' })}>Index</button>
           <button onClick={() => navigate({ to: '/posts' })}>Posts</button>
           <button onClick={() => navigate({ to: '/invoices' })}>
             Invoices
           </button>
-        </React.Fragment>
+        </>
       )
     }
 
@@ -373,9 +390,9 @@ describe('useBlocker', () => {
       path: '/posts',
       component: () => {
         return (
-          <React.Fragment>
+          <>
             <h1>Posts</h1>
-          </React.Fragment>
+          </>
         )
       },
     })
@@ -385,15 +402,16 @@ describe('useBlocker', () => {
       path: '/invoices',
       component: () => {
         return (
-          <React.Fragment>
+          <>
             <h1>Invoices</h1>
-          </React.Fragment>
+          </>
         )
       },
     })
 
     const router = createRouter({
       routeTree: rootRoute.addChildren([indexRoute, postsRoute, invoicesRoute]),
+      history,
     })
 
     type Router = typeof router
@@ -421,5 +439,157 @@ describe('useBlocker', () => {
     ).toBeInTheDocument()
 
     expect(window.location.pathname).toBe('/invoices')
+  })
+
+  test('should allow navigation from 404 page when blocker is active', async () => {
+    const rootRoute = createRootRoute({
+      notFoundComponent: function NotFoundComponent() {
+        const navigate = useNavigate()
+
+        useBlocker({ shouldBlockFn: () => true })
+
+        return (
+          <>
+            <h1>Not Found</h1>
+            <button onClick={() => navigate({ to: '/' })}>Go Home</button>
+            <button onClick={() => navigate({ to: '/posts' })}>
+              Go to Posts
+            </button>
+          </>
+        )
+      },
+    })
+
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => {
+        return (
+          <>
+            <h1>Index</h1>
+          </>
+        )
+      },
+    })
+
+    const postsRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/posts',
+      component: () => {
+        return (
+          <>
+            <h1>Posts</h1>
+          </>
+        )
+      },
+    })
+
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([indexRoute, postsRoute]),
+      history,
+    })
+
+    render(<RouterProvider router={router} />)
+
+    await router.navigate({ to: '/non-existent' as any })
+
+    expect(
+      await screen.findByRole('heading', { name: 'Not Found' }),
+    ).toBeInTheDocument()
+
+    expect(window.location.pathname).toBe('/non-existent')
+
+    const homeButton = await screen.findByRole('button', { name: 'Go Home' })
+    fireEvent.click(homeButton)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Index' }),
+    ).toBeInTheDocument()
+
+    expect(window.location.pathname).toBe('/')
+  })
+
+  test('should handle blocker navigation from 404 to another 404', async () => {
+    const rootRoute = createRootRoute({
+      notFoundComponent: function NotFoundComponent() {
+        const navigate = useNavigate()
+
+        useBlocker({ shouldBlockFn: () => true })
+
+        return (
+          <>
+            <h1>Not Found</h1>
+            <button onClick={() => navigate({ to: '/another-404' as any })}>
+              Go to Another 404
+            </button>
+          </>
+        )
+      },
+    })
+
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => {
+        return (
+          <>
+            <h1>Index</h1>
+          </>
+        )
+      },
+    })
+
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([indexRoute]),
+      history,
+    })
+
+    render(<RouterProvider router={router} />)
+
+    await router.navigate({ to: '/non-existent' })
+
+    expect(
+      await screen.findByRole('heading', { name: 'Not Found' }),
+    ).toBeInTheDocument()
+
+    const anotherButton = await screen.findByRole('button', {
+      name: 'Go to Another 404',
+    })
+    fireEvent.click(anotherButton)
+
+    expect(
+      await screen.findByRole('heading', { name: 'Not Found' }),
+    ).toBeInTheDocument()
+
+    expect(window.location.pathname).toBe('/non-existent')
+  })
+
+  test('navigate function should handle external URLs with ignoreBlocker', async () => {
+    const rootRoute = createRootRoute()
+    const indexRoute = createRoute({
+      getParentRoute: () => rootRoute,
+      path: '/',
+      component: () => <div>Home</div>,
+    })
+
+    const router = createRouter({
+      routeTree: rootRoute.addChildren([indexRoute]),
+      history: createMemoryHistory({
+        initialEntries: ['/'],
+      }),
+    })
+
+    await expect(
+      router.navigate({
+        to: 'https://example.com',
+        ignoreBlocker: true,
+      }),
+    ).resolves.toBeUndefined()
+
+    await expect(
+      router.navigate({
+        to: 'https://example.com',
+      }),
+    ).resolves.toBeUndefined()
   })
 })

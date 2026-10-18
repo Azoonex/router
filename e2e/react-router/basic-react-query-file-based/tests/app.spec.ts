@@ -1,7 +1,24 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
+import { apiTest as test } from '@tanstack/router-e2e-utils'
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
+})
+
+test('GetPosts with networking disabled', async ({ page, context }) => {
+  await page.goto('about:blank')
+  await context.setOffline(true)
+  const { status, posts, post } = await page.evaluate(async () => {
+    const response = await fetch('https://jsonplaceholder.typicode.com/posts')
+    const posts = await response.json()
+    const post = await fetch(
+      'https://jsonplaceholder.typicode.com/posts/1',
+    ).then((r) => r.json())
+    return { status: response.status, posts, post }
+  })
+  expect(status).toBe(200)
+  expect(posts.length).toBeGreaterThan(0)
+  expect(post).toEqual(posts[0])
 })
 
 test('Navigating to a post page', async ({ page }) => {

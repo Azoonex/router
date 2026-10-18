@@ -3,9 +3,13 @@ import type {
   StructuralSharingOption,
   ValidateSelected,
 } from './structuralSharing'
-import type { AnyRouter, RegisteredRouter } from './router'
-import type { AllLoaderData, RouteById } from './routeInfo'
-import type { Expand, StrictOrFrom } from './utils'
+import type {
+  AnyRouter,
+  RegisteredRouter,
+  ResolveUseLoaderData,
+  StrictOrFrom,
+  UseLoaderDataResult,
+} from '@tanstack/router-core'
 
 export interface UseLoaderDataBaseOptions<
   TRouter extends AnyRouter,
@@ -15,7 +19,7 @@ export interface UseLoaderDataBaseOptions<
   TStructuralSharing,
 > {
   select?: (
-    match: ResolveLoaderData<TRouter, TFrom, TStrict>,
+    match: ResolveUseLoaderData<TRouter, TFrom, TStrict>,
   ) => ValidateSelected<TRouter, TSelected, TStructuralSharing>
 }
 
@@ -35,23 +39,6 @@ export type UseLoaderDataOptions<
   > &
   StructuralSharingOption<TRouter, TSelected, TStructuralSharing>
 
-export type ResolveLoaderData<
-  TRouter extends AnyRouter,
-  TFrom,
-  TStrict extends boolean,
-> = TStrict extends false
-  ? AllLoaderData<TRouter['routeTree']>
-  : Expand<RouteById<TRouter['routeTree'], TFrom>['types']['loaderData']>
-
-export type UseLoaderDataResult<
-  TRouter extends AnyRouter,
-  TFrom,
-  TStrict extends boolean,
-  TSelected,
-> = unknown extends TSelected
-  ? ResolveLoaderData<TRouter, TFrom, TStrict>
-  : TSelected
-
 export type UseLoaderDataRoute<out TId> = <
   TRouter extends AnyRouter = RegisteredRouter,
   TSelected = unknown,
@@ -67,6 +54,17 @@ export type UseLoaderDataRoute<out TId> = <
     StructuralSharingOption<TRouter, TSelected, TStructuralSharing>,
 ) => UseLoaderDataResult<TRouter, TId, true, TSelected>
 
+/**
+ * Read and select the current route's loader data with type‑safety.
+ *
+ * Options:
+ * - `from`/`strict`: Choose which route's data to read and strictness
+ * - `select`: Map the loader data to a derived value
+ * - `structuralSharing`: Enable structural sharing for stable references
+ *
+ * @returns The loader data (or selected value) for the matched route.
+ * @link https://tanstack.com/router/latest/docs/framework/react/api/router/useLoaderDataHook
+ */
 export function useLoaderData<
   TRouter extends AnyRouter = RegisteredRouter,
   const TFrom extends string | undefined = undefined,
@@ -86,8 +84,8 @@ export function useLoaderData<
     from: opts.from!,
     strict: opts.strict,
     structuralSharing: opts.structuralSharing,
-    select: (s: any) => {
-      return opts.select ? opts.select(s.loaderData) : s.loaderData
+    select: (match) => {
+      return opts.select ? opts.select(match.loaderData) : match.loaderData
     },
-  } as any) as UseLoaderDataResult<TRouter, TFrom, TStrict, TSelected>
+  }) as UseLoaderDataResult<TRouter, TFrom, TStrict, TSelected>
 }

@@ -12,9 +12,10 @@ import {
   createRouter,
   defer,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import axios from 'redaxios'
 import type { ErrorComponentProps } from '@tanstack/react-router'
+import './styles.css'
 
 type PostType = {
   id: string
@@ -74,7 +75,7 @@ function Spinner({ show, wait }: { show?: boolean; wait?: `delay-${number}` }) {
     <div
       className={`inline-block animate-spin px-3 transition ${
         (show ?? true)
-          ? `opacity-1 duration-500 ${wait ?? 'delay-300'}`
+          ? `opacity-100 duration-500 ${wait ?? 'delay-300'}`
           : 'duration-500 opacity-0 delay-0'
       }`}
     >
@@ -249,6 +250,7 @@ const routeTree = rootRoute.addChildren([
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
+  scrollRestoration: true,
 })
 
 // Register things for typesafety

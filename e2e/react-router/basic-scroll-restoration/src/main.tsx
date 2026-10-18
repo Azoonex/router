@@ -4,15 +4,14 @@ import {
   Link,
   Outlet,
   RouterProvider,
-  ScrollRestoration,
   createRootRoute,
   createRoute,
   createRouter,
   useElementScrollRestoration,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 import { useVirtualizer } from '@tanstack/react-virtual'
-import HasShown from './has-shown'
+import './styles.css'
 
 const rootRoute = createRootRoute({
   component: RootComponent,
@@ -36,7 +35,6 @@ function RootComponent() {
         </Link>
       </div>
       <Outlet />
-      <ScrollRestoration getKey={(location) => location.pathname} />
       <TanStackRouterDevtools />
     </>
   )
@@ -45,7 +43,7 @@ function RootComponent() {
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  loader: () => new Promise((r) => setTimeout(r, 500)),
+  loader: () => new Promise<any>((r) => setTimeout(r, 500)),
   component: IndexComponent,
 })
 
@@ -59,7 +57,7 @@ function IndexComponent() {
       <h3 id="greeting" className="bg-red-600">
         Welcome Home!
       </h3>
-      <HasShown id="top-message" />
+      <div id="top-message" />
       <div className="space-y-2">
         {Array.from({ length: 50 }).map((_, i) => (
           <div
@@ -77,7 +75,7 @@ function IndexComponent() {
 const aboutRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/about',
-  loader: () => new Promise((r) => setTimeout(r, 500)),
+  loader: () => new Promise<any>((r) => setTimeout(r, 500)),
   component: AboutComponent,
 })
 
@@ -105,7 +103,7 @@ function AboutComponent() {
 const byElementRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/by-element',
-  loader: () => new Promise((r) => setTimeout(r, 500)),
+  loader: () => new Promise<any>((r) => setTimeout(r, 500)),
   component: ByElementComponent,
 })
 
@@ -140,7 +138,7 @@ function ByElementComponent() {
         >
           <div className="h-[100px] p-2 rounded-lg bg-red-600 border">
             First Regular List Item
-            <HasShown id="first-regular-list-item" />
+            <div id="first-regular-list-item" />
           </div>
           {Array.from({ length: 50 }).map((_, i) => (
             <div
@@ -204,13 +202,73 @@ function ByElementComponent() {
   )
 }
 
+const fooRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/foo',
+  loader: () => new Promise<any>((r) => setTimeout(r, 500)),
+  component: FooComponent,
+})
+
+function FooComponent() {
+  return (
+    <div data-testid="foo-route-component" className="p-2">
+      <h3 id="greeting">Hello from Foo!</h3>
+      <Link to="/bar" data-testid="go-to-bar-link">
+        Go to Bar
+      </Link>
+      <div className="space-y-2">
+        {Array.from({ length: 50 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[100px] p-2 rounded-lg bg-gray-200 dark:bg-gray-800 border"
+          >
+            Foo Item {i + 1}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+const barRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/bar',
+  loader: () => new Promise<any>((r) => setTimeout(r, 500)),
+  component: BarComponent,
+})
+
+function BarComponent() {
+  return (
+    <div data-testid="bar-route-component" className="p-2">
+      <h3 id="greeting">Hello from Bar!</h3>
+      <div className="space-y-2">
+        {Array.from({ length: 50 }).map((_, i) => (
+          <div
+            key={i}
+            className="h-[100px] p-2 rounded-lg bg-gray-200 dark:bg-gray-800 border"
+          >
+            Bar Item {i + 1}
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 const routeTree = rootRoute.addChildren([
   indexRoute,
   aboutRoute,
   byElementRoute,
+  fooRoute,
+  barRoute,
 ])
 
-const router = createRouter({ routeTree, defaultPreload: 'intent' })
+const router = createRouter({
+  routeTree,
+  defaultPreload: 'intent',
+  scrollRestoration: true,
+  getScrollRestorationKey: (location) => location.pathname,
+})
 
 declare global {
   interface Window {

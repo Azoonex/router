@@ -23,6 +23,12 @@ coverage
 # tests
 packages/router-generator/tests/**/*.gen.ts
 packages/router-generator/tests/**/*.gen.js
+**/port*.txt
+**/test-results/**
+
+# Playwright artifacts
+**/playwright-report/
+**/blob-report/
 
 # misc
 .DS_Store
@@ -53,24 +59,38 @@ ts-perf
 /examples/*/*/package-lock.json
 
 .netlify
+.vercel
 
 nx-cloud.env
-.vscode
 .nx/cache
 .nx/workspace-data
+.nx/polygraph
+.nx/self-healing
+.nx/migrate-runs
 
 gpt/db.json
 
-app.config.timestamp-*
+vite.config.timestamp-*
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
-app.config.js.timestamp-*
-app.config.ts.timestamp-*
 
-app.config.timestamp_*
+vite.config.timestamp_*
 vite.config.js.timestamp_*
 vite.config.ts.timestamp_*
-app.config.js.timestamp_*
-app.config.ts.timestamp_*
+
 .idea
 *.vitest-temp.json
+
+# Handling VSCode settings
+/.vscode/
+!/examples/react/**/.vscode/settings.json
+
+**/llms
+
+**/.tanstack
+
+# eslint-plugin-start perf fixtures
+/e2e/eslint-plugin-start/src/perf/generated
+
+# local memory flame profiles
+benchmarks/memory/**/.profiles/

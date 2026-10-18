@@ -7,19 +7,20 @@ import {
   redirect,
 } from '../src'
 import type {
-  AnyRouter,
   BuildLocationFn,
   ControlledPromise,
   NavigateFn,
   NavigateOptions,
-  ParsedLocation,
-  Route,
   SearchSchemaInput,
 } from '../src'
 import type {
+  AnyRoute,
+  AnyRouter,
+  Expand,
   MakeRouteMatchFromRoute,
   MakeRouteMatchUnion,
-} from '../src/Matches'
+  ParsedLocation,
+} from '@tanstack/router-core'
 
 test('when creating the root', () => {
   const rootRoute = createRootRoute()
@@ -43,6 +44,7 @@ test('when creating the root with routeContext', () => {
         context: {}
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '__root__'
       }>()
     },
   })
@@ -66,6 +68,7 @@ test('when creating the root with beforeLoad', () => {
         context: {}
         search: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '__root__'
       }>()
     },
   })
@@ -88,7 +91,7 @@ test('when creating the root with a loader', () => {
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: never
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>()
     },
   })
@@ -113,6 +116,7 @@ test('when creating the root route with context and routeContext', () => {
         context: { userId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '__root__'
       }>()
     },
   })
@@ -154,6 +158,7 @@ test('when creating the root route with context and beforeLoad', () => {
         context: { userId: string }
         search: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '__root__'
       }>()
     },
   })
@@ -194,7 +199,7 @@ test('when creating the root route with context and a loader', () => {
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: never
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>()
     },
   })
@@ -236,6 +241,7 @@ test('when creating the root route with context, routeContext, beforeLoad and a 
         context: { userId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '__root__'
       }>()
 
       return {
@@ -254,10 +260,12 @@ test('when creating the root route with context, routeContext, beforeLoad and a 
         context: { userId: string; env: 'env1' }
         search: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '__root__'
       }>()
       return { permission: 'view' as const }
     },
     loader: (opts) => {
+      type hi = Expand<typeof opts>
       expectTypeOf(opts).toEqualTypeOf<{
         abortController: AbortController
         preload: boolean
@@ -268,7 +276,7 @@ test('when creating the root route with context, routeContext, beforeLoad and a 
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: never
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>()
     },
   })
@@ -359,6 +367,7 @@ test('when creating a child route with routeContext from the root route with con
         context: { userId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices'
       }>()
 
       return {
@@ -386,6 +395,7 @@ test('when creating a child route with beforeLoad from the root route with conte
         context: { userId: string }
         search: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices'
       }>()
     },
   })
@@ -408,7 +418,7 @@ test('when creating a child route with a loader from the root route', () => {
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: Promise<MakeRouteMatchFromRoute<typeof rootRoute>>
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>()
       return [{ id: 'invoice1' }, { id: 'invoice2' }] as const
     },
@@ -459,7 +469,7 @@ test('when creating a child route with a loader from the root route with context
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: Promise<MakeRouteMatchFromRoute<typeof rootRoute>>
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>()
       return [{ id: 'invoice1' }, { id: 'invoice2' }] as const
     },
@@ -641,6 +651,8 @@ test('when creating a child route with a param and splat param from the root rou
     routeTree: rootRoute.addChildren([invoicesRoute]),
   })
 
+  const params = invoicesRoute.useParams<typeof router>()
+
   expectTypeOf(invoicesRoute.useParams<typeof router>()).toEqualTypeOf<{
     invoiceId: string
     _splat?: string
@@ -679,7 +691,7 @@ test('when creating a child route with params, search and loader from the root r
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: Promise<MakeRouteMatchFromRoute<typeof rootRoute>>
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>
     },
   })
@@ -704,7 +716,7 @@ test('when creating a child route with params, search, loader and loaderDeps fro
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: Promise<MakeRouteMatchFromRoute<typeof rootRoute>>
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>(),
   })
 })
@@ -728,7 +740,7 @@ test('when creating a child route with params, search, loader and loaderDeps fro
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: Promise<MakeRouteMatchFromRoute<typeof rootRoute>>
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>(),
   })
 })
@@ -752,6 +764,7 @@ test('when creating a child route with params, search with routeContext from the
         context: { userId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/$invoiceId'
       }>()
     },
   })
@@ -800,6 +813,7 @@ test('when creating a child route with params, search with routeContext, beforeL
         context: { userId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/$invoiceId'
       }>()
       return {
         env: 'env1',
@@ -817,6 +831,7 @@ test('when creating a child route with params, search with routeContext, beforeL
         context: { userId: string; env: string }
         search: { page: number }
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/$invoiceId'
       }>()
       return { permission: 'view' } as const
     },
@@ -831,7 +846,7 @@ test('when creating a child route with params, search with routeContext, beforeL
         navigate: (opts: NavigateOptions<AnyRouter>) => Promise<void> | void
         parentMatchPromise: Promise<MakeRouteMatchFromRoute<typeof rootRoute>>
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>()
     },
   })
@@ -938,6 +953,7 @@ test('when creating a child route with routeContext from a parent with routeCont
         context: { userId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices'
       }>()
 
       return { invoiceId: 'invoiceId1' }
@@ -959,6 +975,7 @@ test('when creating a child route with routeContext from a parent with routeCont
         context: { userId: string; invoiceId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/details'
       }>()
 
       return { detailId: 'detailId1' }
@@ -1011,6 +1028,7 @@ test('when creating a child route with beforeLoad from a parent with beforeLoad'
         context: { userId: string }
         search: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices'
       }>()
       return { invoiceId: 'invoiceId1' }
     },
@@ -1031,6 +1049,7 @@ test('when creating a child route with beforeLoad from a parent with beforeLoad'
         context: { userId: string; invoiceId: string }
         search: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/details'
       }>()
       return { detailId: 'detailId1' }
     },
@@ -1083,6 +1102,7 @@ test('when creating a child route with routeContext, beforeLoad, search, params,
         context: { userId: string }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices'
       }>()
       return { env: 'env1' }
     },
@@ -1098,6 +1118,7 @@ test('when creating a child route with routeContext, beforeLoad, search, params,
         context: { userId: string; env: string }
         search: { page: number }
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices'
       }>()
       return { invoicePermissions: ['view'] as const }
     },
@@ -1128,6 +1149,7 @@ test('when creating a child route with routeContext, beforeLoad, search, params,
         }
         deps: {}
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/$invoiceId/details'
       }>()
       return { detailEnv: 'detailEnv' }
     },
@@ -1148,6 +1170,7 @@ test('when creating a child route with routeContext, beforeLoad, search, params,
         }
         search: { page: number; detailPage: number }
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/$invoiceId/details'
       }>()
       return { detailsPermissions: ['view'] as const }
     },
@@ -1178,6 +1201,7 @@ test('when creating a child route with routeContext, beforeLoad, search, params,
         }
         deps: { detailPage: number; invoicePage: number }
         matches: Array<MakeRouteMatchUnion>
+        routeId: '/invoices/$invoiceId/details/$detailId'
       }>()
       return { detailEnv: 'detailEnv' }
     },
@@ -1200,7 +1224,7 @@ test('when creating a child route with routeContext, beforeLoad, search, params,
           MakeRouteMatchFromRoute<typeof detailsRoute>
         >
         cause: 'preload' | 'enter' | 'stay'
-        route: Route
+        route: AnyRoute
       }>(),
   })
 })
@@ -1245,7 +1269,6 @@ test('when creating a child route with context, search, params and beforeLoad', 
         .toHaveProperty('to')
         .toEqualTypeOf<
           | '.'
-          | './'
           | './invoices'
           | './invoices/$invoiceId'
           | './invoices/$invoiceId/details'
@@ -1774,4 +1797,150 @@ test('when creating a child route with an explicit search input', () => {
     .toHaveProperty('search')
     .parameter(0)
     .toEqualTypeOf<{ page: string }>()
+})
+
+test('when creating a route with a prefix and suffix', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'prefix{$postId}suffix',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{
+    postId: string
+  }>()
+})
+
+test('when creating a route with a optional prefix and suffix', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'prefix{-$postId}suffix',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{
+    postId?: string
+  }>()
+})
+
+test('when creating a route with a splat prefix and suffix', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'prefix{$}suffix',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{
+    _splat?: string
+  }>()
+})
+
+test('when creating a route with a splat, optional param and required param', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'docs/$docId/$/{-$detailId}/{$myFile}.pdf',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{
+    docId: string
+    _splat?: string
+    myFile: string
+    detailId?: string
+  }>()
+})
+
+test('when creating a route with a boundary splat, optional param and required param', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'docs/$docId/before{$}after/detail{-$detailId}/file-{$myFile}.pdf',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{
+    docId: string
+    _splat?: string
+    myFile: string
+    detailId?: string
+  }>()
+})
+
+test('when creating a route with a nested boundary splat, optional param and required param', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'docs/$docId/before{$}after/{-detail{$detailId}suffix}/file-{$myFile}.pdf',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{
+    docId: string
+    _splat?: string
+    myFile: string
+    detailId?: string
+  }>()
+})
+
+test('when creating a route with a nested boundary splat, optional param, required param and escaping', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: 'docs/$docId/before{$}after/{-detail{$detailId}suffix}[.$test]/file-{$myFile}[.]pdf/escape-param[$postId]',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{
+    docId: string
+    _splat?: string
+    myFile: string
+    detailId?: string
+  }>()
+})
+
+test('when creating a route with escaped path param', () => {
+  const rootRoute = createRootRoute()
+
+  const prefixSuffixRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    path: '[$postId]',
+  })
+
+  const routeTree = rootRoute.addChildren([prefixSuffixRoute])
+
+  const router = createRouter({ routeTree })
+
+  expectTypeOf(prefixSuffixRoute.useParams<typeof router>()).toEqualTypeOf<{}>()
 })

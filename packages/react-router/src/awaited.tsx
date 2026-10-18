@@ -1,19 +1,18 @@
 import * as React from 'react'
-import warning from 'tiny-warning'
-import { useRouter } from './useRouter'
-import { defaultSerializeError } from './router'
-import { TSR_DEFERRED_PROMISE, defer } from './defer'
-import { defaultDeserializeError, isServerSideError } from './isServerSideError'
-import type { DeferredPromise } from './defer'
+
+import { TSR_DEFERRED_PROMISE, defer } from '@tanstack/router-core'
+import { reactUse } from './utils'
 
 export type AwaitOptions<T> = {
   promise: Promise<T>
 }
 
-export function useAwaited<T>({
-  promise: _promise,
-}: AwaitOptions<T>): [T, DeferredPromise<T>] {
-  const router = useRouter()
+/** Suspend until a deferred promise resolves or rejects and return its data. */
+export function useAwaited<T>({ promise: _promise }: AwaitOptions<T>): T {
+  if (reactUse) {
+    const data = reactUse(_promise)
+    return data
+  }
   const promise = defer(_promise)
 
   if (promise[TSR_DEFERRED_PROMISE].status === 'pending') {
@@ -21,30 +20,16 @@ export function useAwaited<T>({
   }
 
   if (promise[TSR_DEFERRED_PROMISE].status === 'error') {
-    if (typeof document !== 'undefined') {
-      if (isServerSideError(promise[TSR_DEFERRED_PROMISE].error)) {
-        throw (
-          router.options.errorSerializer?.deserialize ?? defaultDeserializeError
-        )(promise[TSR_DEFERRED_PROMISE].error.data as any)
-      } else {
-        warning(
-          false,
-          "Encountered a server-side error that doesn't fit the expected shape",
-        )
-        throw promise[TSR_DEFERRED_PROMISE].error
-      }
-    } else {
-      throw {
-        data: (
-          router.options.errorSerializer?.serialize ?? defaultSerializeError
-        )(promise[TSR_DEFERRED_PROMISE].error),
-        __isServerError: true,
-      }
-    }
+    throw promise[TSR_DEFERRED_PROMISE].error
   }
-  return [promise[TSR_DEFERRED_PROMISE].data, promise]
+
+  return promise[TSR_DEFERRED_PROMISE].data
 }
 
+/**
+ * Component that suspends on a deferred promise and renders its child with
+ * the resolved value. Optionally provides a Suspense fallback.
+ */
 export function Await<T>(
   props: AwaitOptions<T> & {
     fallback?: React.ReactNode
@@ -64,7 +49,7 @@ function AwaitInner<T>(
     children: (result: T) => React.ReactNode
   },
 ): React.JSX.Element {
-  const [data] = useAwaited(props)
+  const data = useAwaited(props)
 
   return props.children(data) as React.JSX.Element
 }

@@ -8,11 +8,12 @@ export type PostType = {
 
 export class PostNotFoundError extends Error {}
 
+const queryURL = 'https://jsonplaceholder.typicode.com'
+
 export const fetchPost = async (postId: string) => {
   console.info(`Fetching post with id ${postId}...`)
-  await new Promise((r) => setTimeout(r, 500))
   const post = await axios
-    .get<PostType>(`https://jsonplaceholder.typicode.com/posts/${postId}`)
+    .get<PostType>(`${queryURL}/posts/${postId}`)
     .then((r) => r.data)
     .catch((err) => {
       if (err.status === 404) {
@@ -26,8 +27,7 @@ export const fetchPost = async (postId: string) => {
 
 export const fetchPosts = async () => {
   console.info('Fetching posts...')
-  await new Promise((r) => setTimeout(r, 500))
   return axios
-    .get<Array<PostType>>('https://jsonplaceholder.typicode.com/posts')
+    .get<Array<PostType>>(`${queryURL}/posts`)
     .then((r) => r.data.slice(0, 10))
 }

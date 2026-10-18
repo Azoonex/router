@@ -1,4 +1,5 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
+import { apiTest as test } from '@tanstack/router-e2e-utils'
 import type { Page } from '@playwright/test'
 
 test.beforeEach(async ({ page }) => {
@@ -31,6 +32,17 @@ test('Navigating to a not-found route', async ({ page }) => {
   )
   await page.getByRole('link', { name: 'Start Over' }).click()
   await expect(page.getByRole('heading')).toContainText('Welcome Home!')
+})
+
+test('lazy file route errorComponent is rendered when the loader throws', async ({
+  page,
+}) => {
+  await page.goto('/lazy-error')
+
+  await expect(page.getByTestId('lazy-route-error-component')).toContainText(
+    'Lazy route error component',
+  )
+  await expect(page.locator('body')).not.toContainText('Something went wrong!')
 })
 
 test("useBlocker doesn't block navigation if condition is not met", async ({
@@ -107,6 +119,80 @@ test('legacy Proceeding through blocked navigation works', async ({ page }) => {
   await expect(page.getByRole('heading')).toContainText('Editing A')
 })
 
+test('useCanGoBack correctly disables back button', async ({ page }) => {
+  const getBackButtonDisabled = async () => {
+    const backButton = page.getByTestId('back-button')
+    const isDisabled = (await backButton.getAttribute('disabled')) !== null
+    return isDisabled
+  }
+
+  expect(await getBackButtonDisabled()).toBe(true)
+
+  await page.getByRole('link', { name: 'Posts' }).click()
+  await expect(page.getByTestId('posts-links')).toBeInViewport()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.getByRole('link', { name: 'sunt aut facere repe' }).click()
+  await expect(page.getByTestId('post-title')).toBeInViewport()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.reload()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.goBack()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.goForward()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.goBack()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.goBack()
+  expect(await getBackButtonDisabled()).toBe(true)
+
+  await page.reload()
+  expect(await getBackButtonDisabled()).toBe(true)
+})
+
+test('useCanGoBack correctly disables back button, using router.history and window.history', async ({
+  page,
+}) => {
+  const getBackButtonDisabled = async () => {
+    const backButton = page.getByTestId('back-button')
+    const isDisabled = (await backButton.getAttribute('disabled')) !== null
+    return isDisabled
+  }
+
+  await page.getByRole('link', { name: 'Posts' }).click()
+  await expect(page.getByTestId('posts-links')).toBeInViewport()
+  await page.getByRole('link', { name: 'sunt aut facere repe' }).click()
+  await expect(page.getByTestId('post-title')).toBeInViewport()
+  await page.getByTestId('back-button').click()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.reload()
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.getByTestId('back-button').click()
+  expect(await getBackButtonDisabled()).toBe(true)
+
+  await page.evaluate('window.history.forward()')
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.evaluate('window.history.forward()')
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.evaluate('window.history.back()')
+  expect(await getBackButtonDisabled()).toBe(false)
+
+  await page.evaluate('window.history.back()')
+  expect(await getBackButtonDisabled()).toBe(true)
+
+  await page.reload()
+  expect(await getBackButtonDisabled()).toBe(true)
+})
+
 const testCases = [
   {
     description: 'Navigating to a route inside a route group',
@@ -147,7 +233,8 @@ testCases.forEach(({ description, testId }) => {
 
 test('navigating to an unnested route', async ({ page }) => {
   const postId = 'hello-world'
-  page.goto(`/posts/${postId}/edit`)
+  await page.goto(`/posts/${postId}/edit`)
+  await page.waitForURL(`/posts/${postId}/edit`)
   await expect(page.getByTestId('params-via-hook')).toContainText(postId)
   await expect(page.getByTestId('params-via-route-hook')).toContainText(postId)
   await expect(page.getByTestId('params-via-route-api')).toContainText(postId)
@@ -182,6 +269,8 @@ async function structuralSharingTest(page: Page, enabled: boolean) {
 
 test('structural sharing disabled', async ({ page }) => {
   await structuralSharingTest(page, false)
+  expect(await getRenderCount(page)).toBe(2)
+  await page.getByTestId('link').click()
   expect(await getRenderCount(page)).toBeGreaterThan(2)
 })
 
@@ -190,4 +279,132 @@ test('structural sharing enabled', async ({ page }) => {
   expect(await getRenderCount(page)).toBe(2)
   await page.getByTestId('link').click()
   expect(await getRenderCount(page)).toBe(2)
+})
+
+test('Should change title on client side navigation', async ({ page }) => {
+  await page.goto('/')
+
+  await page.getByRole('link', { name: 'Posts' }).click()
+
+  await expect(page).toHaveTitle('Posts page')
+})
+
+test('Should change post navigating back and forth', async ({ page }) => {
+  await page.goto('/posts/1')
+  await page.getByRole('link', { name: 'sunt aut facere repe' }).click()
+
+  await page.getByRole('link', { name: 'qui est esse' }).click()
+  await expect(page.getByTestId('post-title')).toContainText('qui est esse')
+
+  await page.getByRole('link', { name: 'sunt aut facere repe' }).click()
+  await expect(page.getByTestId('post-title')).toContainText('sunt aut facere')
+})
+
+test('Should not remount deps when remountDeps does not change ', async ({
+  page,
+}) => {
+  await page.goto('/notRemountDeps')
+  await expect(page.getByTestId('component-mounts')).toContainText(
+    'Page component mounts: 1',
+  )
+  await page.getByRole('button', { name: 'Regenerate search param' }).click()
+  await expect(page.getByTestId('component-mounts')).toContainText(
+    'Page component mounts: 1',
+  )
+  await page.getByRole('button', { name: 'Regenerate search param' }).click()
+  await expect(page.getByTestId('component-mounts')).toContainText(
+    'Page component mounts: 1',
+  )
+})
+
+test('Should remount deps when remountDeps does change ', async ({ page }) => {
+  await page.goto('/remountDeps')
+  await expect(page.getByTestId('component-mounts')).toContainText(
+    'Page component mounts: 1',
+  )
+  await page.getByRole('button', { name: 'Regenerate search param' }).click()
+  await expect(page.getByTestId('component-mounts')).toContainText(
+    'Page component mounts: 2',
+  )
+  await page.getByRole('button', { name: 'Regenerate search param' }).click()
+  await expect(page.getByTestId('component-mounts')).toContainText(
+    'Page component mounts: 3',
+  )
+})
+
+test.describe('Unicode route rendering', () => {
+  test('should render non-latin route correctly', async ({ page, baseURL }) => {
+    await page.goto('/대한민국')
+
+    await expect(page.locator('body')).toContainText('Hello "/대한민국"!')
+
+    expect(page.url()).toBe(`${baseURL}/%EB%8C%80%ED%95%9C%EB%AF%BC%EA%B5%AD`)
+  })
+})
+
+test.describe('Pathless layout routes', () => {
+  test('direct navigation to pathless layout route renders correctly', async ({
+    page,
+  }) => {
+    await page.goto('/pathless-layout')
+    await expect(page.getByTestId('pathless-layout-header')).toContainText(
+      'Pathless Layout Section',
+    )
+    await expect(page.getByTestId('pathless-layout-wrapper')).toContainText(
+      'Pathless Layout Wrapper',
+    )
+    await expect(page.getByTestId('pathless-layout-index')).toContainText(
+      'Pathless Layout Index',
+    )
+  })
+
+  test('client-side navigation to pathless layout route', async ({ page }) => {
+    await page.goto('/')
+    await page.getByTestId('link-to-pathless-layout').click()
+    await expect(page.getByTestId('pathless-layout-header')).toContainText(
+      'Pathless Layout Section',
+    )
+    await expect(page.getByTestId('pathless-layout-wrapper')).toContainText(
+      'Pathless Layout Wrapper',
+    )
+  })
+
+  test('navigation within pathless layout preserves layout', async ({
+    page,
+  }) => {
+    await page.goto('/pathless-layout')
+    await page.getByTestId('link-to-child').click()
+    await expect(page.getByTestId('pathless-layout-header')).toContainText(
+      'Pathless Layout Section',
+    )
+    await expect(page.getByTestId('pathless-layout-wrapper')).toContainText(
+      'Pathless Layout Wrapper',
+    )
+    await expect(page.getByTestId('pathless-layout-child')).toContainText(
+      'Pathless Layout Child Route',
+    )
+  })
+
+  test('direct navigation to child of pathless layout', async ({ page }) => {
+    await page.goto('/pathless-layout/child')
+    await expect(page.getByTestId('pathless-layout-header')).toContainText(
+      'Pathless Layout Section',
+    )
+    await expect(page.getByTestId('pathless-layout-wrapper')).toContainText(
+      'Pathless Layout Wrapper',
+    )
+    await expect(page.getByTestId('pathless-layout-child')).toContainText(
+      'Pathless Layout Child Route',
+    )
+  })
+
+  test('navigating to non-existent route under pathless layout shows not found', async ({
+    page,
+  }) => {
+    await page.goto('/pathless-layout/does-not-exist')
+    await expect(page.getByTestId('pathless-layout-not-found')).toContainText(
+      'Not Found in Pathless Layout',
+    )
+    await expect(page.locator('body')).toContainText('Not Found')
+  })
 })

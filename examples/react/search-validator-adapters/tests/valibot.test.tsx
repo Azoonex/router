@@ -8,7 +8,6 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 import * as v from 'valibot'
-import '@testing-library/jest-dom/vitest'
 
 test('can navigate to the route', async () => {
   const rootRoute = createRootRoute()
@@ -25,7 +24,7 @@ test('can navigate to the route', async () => {
     return (
       <div>
         <div>{search}</div>
-        <Link from="/users/valibot" search={{ search: 'updated' }}>
+        <Link from="/users/valibot/" search={{ search: 'updated' }}>
           Update
         </Link>
       </div>
@@ -43,7 +42,7 @@ test('can navigate to the route', async () => {
 
   const routeTree = rootRoute.addChildren([indexRoute, valibotRoute])
 
-  const router = createRouter({ routeTree })
+  const router = createRouter({ routeTree, scrollRestoration: true })
 
   render(<RouterProvider router={router as any} />)
 

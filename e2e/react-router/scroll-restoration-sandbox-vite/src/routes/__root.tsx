@@ -2,11 +2,10 @@ import * as React from 'react'
 import {
   Link,
   Outlet,
-  ScrollRestoration,
   createRootRoute,
   linkOptions,
 } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -20,7 +19,6 @@ function RootComponent() {
       <Outlet />
       <hr />
       <Nav type="footer" />
-      <ScrollRestoration />
       <TanStackRouterDevtools position="bottom-right" />
     </>
   )
@@ -47,6 +45,8 @@ function Nav({ type }: { type: 'header' | 'footer' }) {
           linkOptions({ to: '/virtual-page' }),
           linkOptions({ to: '/lazy-with-loader-page' }),
           linkOptions({ to: '/page-with-search', search: { where: type } }),
+          linkOptions({ to: '/issue-7040-source' }),
+          linkOptions({ to: '/issue-7040-target' }),
         ] as const
       ).map((options, i) => (
         <Link

@@ -1,4 +1,7 @@
-import { expect, test } from '@playwright/test'
+import { expect } from '@playwright/test'
+import { apiTest as test } from '@tanstack/router-e2e-utils'
+
+const PORT = Number(process.env.E2E_APP_PORT ?? 0)
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/')
@@ -44,4 +47,17 @@ test('Navigating to a post page with viewTransition types', async ({
   await page.getByRole('link', { name: 'View Transition types' }).click()
   await page.getByRole('link', { name: 'sunt aut facere repe' }).click()
   await expect(page.getByRole('heading')).toContainText('sunt aut facere')
+})
+
+test('Link in SVG does not trigger a full page reload', async ({ page }) => {
+  let fullPageLoad = false
+  page.on('domcontentloaded', () => {
+    fullPageLoad = true
+  })
+
+  await page.getByRole('link', { name: 'Open posts from SVG' }).click()
+  const url = `http://localhost:${PORT}/posts`
+  await page.waitForURL(url)
+
+  expect(fullPageLoad).toBeFalsy()
 })

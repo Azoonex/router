@@ -1,6 +1,6 @@
 import * as React from 'react'
 import { Link, Outlet, createRootRoute } from '@tanstack/react-router'
-import { TanStackRouterDevtools } from '@tanstack/router-devtools'
+import { TanStackRouterDevtools } from '@tanstack/react-router-devtools'
 
 export const Route = createRootRoute({
   component: RootComponent,
@@ -52,6 +52,15 @@ function RootComponent() {
           without-loader
         </Link>{' '}
         <Link
+          to="/shared-singleton"
+          activeProps={{
+            className: 'font-bold',
+          }}
+          data-testid="shared-singleton-link"
+        >
+          shared-singleton
+        </Link>{' '}
+        <Link
           // @ts-expect-error
           to="/this-route-does-not-exist"
           activeProps={{
@@ -62,6 +71,16 @@ function RootComponent() {
         </Link>
       </div>
       <hr />
+      <div style={{ height: '200vh' }} />
+      <Link
+        preload="viewport"
+        to="/viewport-test"
+        activeProps={{
+          className: 'font-bold',
+        }}
+      >
+        viewport-test
+      </Link>
       <Outlet />
       {/* Start rendering router matches */}
       <TanStackRouterDevtools position="bottom-right" />

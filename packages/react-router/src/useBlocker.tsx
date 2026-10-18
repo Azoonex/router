@@ -1,3 +1,5 @@
+'use client'
+
 import * as React from 'react'
 import { useRouter } from './useRouter'
 import type {
@@ -5,16 +7,19 @@ import type {
   HistoryAction,
   HistoryLocation,
 } from '@tanstack/history'
-import type { AnyRoute } from './route'
-import type { ParseRoute } from './routeInfo'
-import type { AnyRouter, RegisteredRouter } from './router'
+import type {
+  AnyRoute,
+  AnyRouter,
+  ParseRoute,
+  RegisteredRouter,
+} from '@tanstack/router-core'
 
-interface ShouldBlockFnLocation<
+type ShouldBlockFnLocation<
   out TRouteId,
   out TFullPath,
   out TAllParams,
   out TFullSearchSchema,
-> {
+> = {
   routeId: TRouteId
   fullPath: TFullPath
   pathname: string
@@ -173,22 +178,38 @@ export function useBlocker(
       function getLocation(
         location: HistoryLocation,
       ): AnyShouldBlockFnLocation {
-        const parsedLocation = router.parseLocation(undefined, location)
-        const matchedRoutes = router.getMatchedRoutes(parsedLocation)
-        if (matchedRoutes.foundRoute === undefined) {
-          throw new Error(`No route found for location ${location.href}`)
+        const parsedLocation = router.parseLocation(location)
+        const [, rawParams, foundRoute] = router.getMatchedRoutes(
+          parsedLocation.pathname,
+        )
+        if (foundRoute === undefined) {
+          return {
+            routeId: '__notFound__',
+            fullPath: parsedLocation.pathname,
+            pathname: parsedLocation.pathname,
+            params: rawParams,
+            search: router.options.parseSearch(location.search),
+          }
         }
+
         return {
-          routeId: matchedRoutes.foundRoute.id,
-          fullPath: matchedRoutes.foundRoute.fullPath,
+          routeId: foundRoute.id,
+          fullPath: foundRoute.fullPath,
           pathname: parsedLocation.pathname,
-          params: matchedRoutes.routeParams,
-          search: parsedLocation.search,
+          params: rawParams,
+          search: router.options.parseSearch(location.search),
         }
       }
 
       const current = getLocation(blockerFnArgs.currentLocation)
       const next = getLocation(blockerFnArgs.nextLocation)
+
+      if (
+        current.routeId === '__notFound__' &&
+        next.routeId !== '__notFound__'
+      ) {
+        return false
+      }
 
       const shouldBlock = await shouldBlockFn({
         action: blockerFnArgs.action,
@@ -230,7 +251,14 @@ export function useBlocker(
     return disabled
       ? undefined
       : history.block({ blockerFn: blockerFnComposed, enableBeforeUnload })
-  }, [shouldBlockFn, enableBeforeUnload, disabled, withResolver, history])
+  }, [
+    shouldBlockFn,
+    enableBeforeUnload,
+    disabled,
+    withResolver,
+    history,
+    router,
+  ])
 
   return resolver
 }

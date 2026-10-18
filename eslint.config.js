@@ -1,10 +1,10 @@
 // @ts-check
 
-// @ts-expect-error
-import { tanstackConfig } from '@tanstack/config/eslint'
+import { tanstackConfig } from '@tanstack/eslint-config'
 
 import unusedImports from 'eslint-plugin-unused-imports'
 
+/** @type {import('eslint').Linter.Config[]} */
 export default [
   ...tanstackConfig,
   {

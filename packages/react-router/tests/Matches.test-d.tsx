@@ -8,7 +8,8 @@ import {
   useMatchRoute,
   useMatches,
 } from '../src'
-import type { AnyRouteMatch, RouteMatch } from '../src'
+import type * as React from 'react'
+import type { AnyRouteMatch, MakeMatchRouteOptions, RouteMatch } from '../src'
 
 const rootRoute = createRootRoute()
 
@@ -155,26 +156,14 @@ test('when matching a route with params', () => {
     .parameter(0)
     .toHaveProperty('to')
     .toEqualTypeOf<
-      | '/'
-      | '.'
-      | '..'
-      | '/invoices'
-      | '/invoices/$invoiceId'
-      | '/comments/$id'
-      | undefined
+      '/' | '.' | '..' | '/invoices' | '/invoices/$invoiceId' | '/comments/$id'
     >()
 
-  expectTypeOf(MatchRoute<DefaultRouter, any, '/invoices/$invoiceId'>)
+  expectTypeOf(MatchRoute<DefaultRouter, string, '/invoices/$invoiceId'>)
     .parameter(0)
     .toHaveProperty('to')
     .toEqualTypeOf<
-      | '/'
-      | '.'
-      | '..'
-      | '/invoices'
-      | '/invoices/$invoiceId'
-      | '/comments/$id'
-      | undefined
+      '/' | '.' | '..' | '/invoices' | '/invoices/$invoiceId' | '/comments/$id'
     >()
 
   expectTypeOf(
@@ -244,4 +233,20 @@ test('when filtering useMatches by loaderData with an array', () => {
   expectTypeOf(
     matches.filter((match) => isMatch(match, 'loaderData.0.comment')),
   ).toEqualTypeOf<Array<CommentsMatch>>()
+})
+
+test('MatchRoute children are typed from resolved params under pathless layouts', () => {
+  type CommentsMatchRouteChildren = MakeMatchRouteOptions<
+    DefaultRouter,
+    string,
+    '/comments/$id'
+  >['children']
+  type CommentsMatchRouteRenderFn = Extract<
+    CommentsMatchRouteChildren,
+    (...args: Array<any>) => any
+  >
+
+  expectTypeOf<CommentsMatchRouteRenderFn>().toEqualTypeOf<
+    (params?: { id: string } | undefined) => React.ReactNode
+  >()
 })

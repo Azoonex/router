@@ -8,7 +8,6 @@ import {
   createRouter,
 } from '@tanstack/react-router'
 
-import '@testing-library/jest-dom/vitest'
 import { type } from 'arktype'
 
 test('can navigate to the route', async () => {
@@ -26,7 +25,7 @@ test('can navigate to the route', async () => {
     return (
       <div>
         <div>{search}</div>
-        <Link from="/users/arktype" search={{ search: 'updated' }}>
+        <Link from="/users/arktype/" search={{ search: 'updated' }}>
           Update
         </Link>
       </div>
@@ -34,7 +33,7 @@ test('can navigate to the route', async () => {
   }
 
   const search = type({
-    'search?': 'string = "default"',
+    search: 'string = "default"',
   })
 
   const arkTypeRoute = createRoute({
@@ -46,7 +45,7 @@ test('can navigate to the route', async () => {
 
   const routeTree = rootRoute.addChildren([indexRoute, arkTypeRoute])
 
-  const router = createRouter({ routeTree })
+  const router = createRouter({ routeTree, scrollRestoration: true })
 
   render(<RouterProvider router={router as any} />)
 

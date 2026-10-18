@@ -1,5 +1,6 @@
+import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
-import { ErrorComponent, createFileRoute } from '@tanstack/react-router'
+import { ErrorComponent } from '@tanstack/react-router'
 import { fetchPost } from '../posts'
 import type { ErrorComponentProps } from '@tanstack/react-router'
 
@@ -21,7 +22,9 @@ function PostComponent() {
 
   return (
     <div className="space-y-2">
-      <h4 className="text-xl font-bold underline">{post.title}</h4>
+      <h4 className="text-xl font-bold underline" data-testid="post-title">
+        {post.title}
+      </h4>
       <div className="text-sm">{post.body}</div>
     </div>
   )

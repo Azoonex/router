@@ -1,6 +1,7 @@
 import { describe, expectTypeOf, test } from 'vitest'
 import { createRootRoute, createRoute, createRouter, getRouteApi } from '../src'
 import type { MakeRouteMatch, UseNavigateResult } from '../src'
+import type { LinkComponentRoute } from '../src/link'
 
 const rootRoute = createRootRoute()
 
@@ -59,6 +60,12 @@ describe('getRouteApi', () => {
     expectTypeOf(invoiceRouteApi.useParams<DefaultRouter>()).toEqualTypeOf<{
       invoiceId: string
     }>()
+
+    expectTypeOf(
+      invoiceRouteApi.useParams<DefaultRouter, unknown, boolean, false>({
+        shouldThrow: false,
+      }),
+    ).toEqualTypeOf<{ invoiceId: string } | undefined>()
   })
   test('useContext', () => {
     expectTypeOf(
@@ -71,6 +78,12 @@ describe('getRouteApi', () => {
     expectTypeOf(invoiceRouteApi.useSearch<DefaultRouter>()).toEqualTypeOf<{
       page: number
     }>()
+
+    expectTypeOf(
+      invoiceRouteApi.useSearch<DefaultRouter, unknown, boolean, false>({
+        shouldThrow: false,
+      }),
+    ).toEqualTypeOf<{ page: number } | undefined>()
   })
   test('useLoaderData', () => {
     expectTypeOf(invoiceRouteApi.useLoaderData<DefaultRouter>()).toEqualTypeOf<{
@@ -86,6 +99,31 @@ describe('getRouteApi', () => {
     expectTypeOf(invoiceRouteApi.useMatch<DefaultRouter>()).toEqualTypeOf<
       MakeRouteMatch<typeof routeTree, '/invoices/$invoiceId'>
     >()
+
+    expectTypeOf(
+      invoiceRouteApi.useMatch<DefaultRouter>({ shouldThrow: true }),
+    ).toEqualTypeOf<MakeRouteMatch<typeof routeTree, '/invoices/$invoiceId'>>()
+
+    expectTypeOf(
+      invoiceRouteApi.useMatch<DefaultRouter, unknown, boolean, false>({
+        shouldThrow: false,
+      }),
+    ).toEqualTypeOf<
+      MakeRouteMatch<typeof routeTree, '/invoices/$invoiceId'> | undefined
+    >()
+
+    expectTypeOf(
+      invoiceRouteApi.useMatch<DefaultRouter, string, boolean, false>({
+        shouldThrow: false,
+        select: (match) => match.params.invoiceId,
+      }),
+    ).toEqualTypeOf<string | undefined>()
+  })
+  test('Link', () => {
+    const Link = invoiceRouteApi.Link
+    expectTypeOf(Link).toEqualTypeOf<
+      LinkComponentRoute<'/invoices/$invoiceId'>
+    >()
   })
 })
 
@@ -97,5 +135,37 @@ describe('createRoute', () => {
         ExtractDefaultFrom<typeof navigate>
       >().toEqualTypeOf<'/invoices/$invoiceId'>()
     })
+  })
+})
+
+describe('fullPath type correctness', () => {
+  // Create a layout route (pathless route)
+  const layoutRoute = createRoute({
+    getParentRoute: () => rootRoute,
+    id: '_layout',
+  })
+
+  const layoutChildRoute = createRoute({
+    getParentRoute: () => layoutRoute,
+    path: 'dashboard',
+  })
+
+  const routeTreeWithLayout = rootRoute.addChildren([
+    layoutRoute.addChildren([layoutChildRoute]),
+    indexRoute,
+  ])
+
+  test('index route fullPath should have trailing slash to match runtime', () => {
+    // At runtime, Route.fullPath returns '/invoices/' for an index route
+    // The type should match this behavior
+    const fullPath = invoicesIndexRoute.fullPath
+    expectTypeOf(fullPath).toEqualTypeOf<'/invoices/'>()
+  })
+
+  test('layout route fullPath should be "/" not empty string', () => {
+    // At runtime, a pathless layout route has fullPath of '/'
+    // The type should be '/' not ''
+    const fullPath = layoutRoute.fullPath
+    expectTypeOf(fullPath).toEqualTypeOf<'/'>()
   })
 })

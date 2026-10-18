@@ -1,5 +1,6 @@
+import { createFileRoute } from '@tanstack/react-router'
 import * as React from 'react'
-import { createFileRoute, useRouter } from '@tanstack/react-router'
+import { useRouter } from '@tanstack/react-router'
 import { z } from 'zod'
 
 export const Route = createFileRoute('/login')({
@@ -40,7 +41,7 @@ function LoginComponent() {
           auth.logout()
           router.invalidate()
         }}
-        className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded"
+        className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded-sm"
       >
         Log out
       </button>
@@ -55,11 +56,11 @@ function LoginComponent() {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           placeholder="Username"
-          className="border p-1 px-2 rounded"
+          className="border p-1 px-2 rounded-sm"
         />
         <button
           type="submit"
-          className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded"
+          className="text-sm bg-blue-500 text-white border inline-block py-1 px-2 rounded-sm"
         >
           Login
         </button>

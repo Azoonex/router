@@ -1,61 +1,19 @@
+'use client'
+
 import * as React from 'react'
+import { hasKeys } from '@tanstack/router-core'
 import { Matches } from './Matches'
-import { getRouterContext } from './routerContext'
-import type { NavigateOptions, ToOptions } from './link'
-import type { ParsedLocation } from './location'
-import type { RoutePaths } from './routeInfo'
+import { routerContext } from './routerContext'
 import type {
   AnyRouter,
   RegisteredRouter,
-  Router,
   RouterOptions,
-  ViewTransitionOptions,
-} from './router'
+} from '@tanstack/router-core'
 
-export interface CommitLocationOptions {
-  replace?: boolean
-  resetScroll?: boolean
-  hashScrollIntoView?: boolean | ScrollIntoViewOptions
-  viewTransition?: boolean | ViewTransitionOptions
-  /**
-   * @deprecated All navigations use React transitions under the hood now
-   **/
-  startTransition?: boolean
-  ignoreBlocker?: boolean
-}
-
-export interface MatchLocation {
-  to?: string | number | null
-  fuzzy?: boolean
-  caseSensitive?: boolean
-  from?: string
-}
-
-export type NavigateFn = <
-  TRouter extends RegisteredRouter,
-  TTo extends string | undefined,
-  TFrom extends RoutePaths<TRouter['routeTree']> | string = string,
-  TMaskFrom extends RoutePaths<TRouter['routeTree']> | string = TFrom,
-  TMaskTo extends string = '',
->(
-  opts: NavigateOptions<TRouter, TFrom, TTo, TMaskFrom, TMaskTo>,
-) => Promise<void> | void
-
-export type BuildLocationFn = <
-  TRouter extends RegisteredRouter,
-  TTo extends string | undefined,
-  TFrom extends RoutePaths<TRouter['routeTree']> | string = string,
-  TMaskFrom extends RoutePaths<TRouter['routeTree']> | string = TFrom,
-  TMaskTo extends string = '',
->(
-  opts: ToOptions<TRouter, TFrom, TTo, TMaskFrom, TMaskTo> & {
-    leaveParams?: boolean
-    _includeValidateSearch?: boolean
-  },
-) => ParsedLocation
-
-export type InjectedHtmlEntry = string | (() => Promise<string> | string)
-
+/**
+ * Low-level provider that places the router into React context and optionally
+ * updates router options from props. Most apps should use `RouterProvider`.
+ */
 export function RouterContextProvider<
   TRouter extends AnyRouter = RegisteredRouter,
   TDehydrated extends Record<string, any> = Record<string, any>,
@@ -66,20 +24,22 @@ export function RouterContextProvider<
 }: RouterProps<TRouter, TDehydrated> & {
   children: React.ReactNode
 }) {
-  // Allow the router to update options on the router instance
-  router.update({
-    ...router.options,
-    ...rest,
-    context: {
-      ...router.options.context,
-      ...rest.context,
-    },
-  } as any)
-
-  const routerContext = getRouterContext()
+  if (hasKeys(rest)) {
+    // Allow the router to update options on the router instance
+    router.update({
+      ...router.options,
+      ...rest,
+      context: {
+        ...router.options.context,
+        ...rest.context,
+      },
+    })
+  }
 
   const provider = (
-    <routerContext.Provider value={router}>{children}</routerContext.Provider>
+    <routerContext.Provider value={router as AnyRouter}>
+      {children}
+    </routerContext.Provider>
   )
 
   if (router.options.Wrap) {
@@ -89,6 +49,15 @@ export function RouterContextProvider<
   return provider
 }
 
+/**
+ * Renders the current match presentation and provides the router to the React
+ * tree via context.
+ *
+ * Accepts mutable router options via props. Configure initialization-only
+ * options with `createRouter`.
+ *
+ * @link https://tanstack.com/router/latest/docs/framework/react/api/router/createRouterFunction
+ */
 export function RouterProvider<
   TRouter extends AnyRouter = RegisteredRouter,
   TDehydrated extends Record<string, any> = Record<string, any>,
@@ -111,14 +80,9 @@ export type RouterProps<
     TRouter['history'],
     TDehydrated
   >,
-  'context'
+  'context' | 'pathParamsAllowedCharacters'
 > & {
-  router: Router<
-    TRouter['routeTree'],
-    NonNullable<TRouter['options']['trailingSlash']>,
-    NonNullable<TRouter['options']['defaultStructuralSharing']>,
-    TRouter['history']
-  >
+  router: TRouter
   context?: Partial<
     RouterOptions<
       TRouter['routeTree'],

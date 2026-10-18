@@ -1,9 +1,12 @@
 import { defineConfig, devices } from '@playwright/test'
-import { derivePort } from '../../utils.js'
-import packageJson from './package.json' with { type: 'json' }
+import { appServerReady } from '@tanstack/router-e2e-utils'
 
-const PORT = derivePort(packageJson.name)
+const PORT = Number(process.env.E2E_APP_PORT ?? 0)
 const baseURL = `http://localhost:${PORT}`
+const command = `pnpm build && pnpm preview --host 0.0.0.0 --port ${PORT}`
+
+console.info('Running with mode: ', process.env.MODE || 'default')
+
 /**
  * See https://playwright.dev/docs/test-configuration.
  */
@@ -19,10 +22,15 @@ export default defineConfig({
   },
 
   webServer: {
-    command: `VITE_SERVER_PORT=${PORT} pnpm build && VITE_SERVER_PORT=${PORT} pnpm start --port ${PORT}`,
-    url: baseURL,
-    reuseExistingServer: !process.env.CI,
+    command,
+    wait: appServerReady,
+    reuseExistingServer: false,
     stdout: 'pipe',
+    env: {
+      MODE: process.env.MODE || '',
+      VITE_MODE: process.env.MODE || '',
+      PORT: String(PORT),
+    },
   },
 
   projects: [

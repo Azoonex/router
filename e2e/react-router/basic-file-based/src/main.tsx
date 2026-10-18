@@ -1,13 +1,37 @@
 import React from 'react'
 import ReactDOM from 'react-dom/client'
-import { RouterProvider, createRouter } from '@tanstack/react-router'
+import {
+  RouterProvider,
+  createRouteMask,
+  createRouter,
+} from '@tanstack/react-router'
 import { routeTree } from './routeTree.gen'
+import './styles.css'
+
+const mask = createRouteMask({
+  routeTree,
+  from: '/masks/admin/$userId',
+  to: '/masks/public/$username',
+  params: (prev) => ({
+    username: `user-${prev.userId}`,
+  }),
+})
 
 // Set up a Router instance
 const router = createRouter({
   routeTree,
   defaultPreload: 'intent',
   defaultStaleTime: 5000,
+  scrollRestoration: true,
+  routeMasks: [mask],
+  rewrite: {
+    output: ({ url }) => {
+      if (url.pathname === '/document-navigation-target') {
+        return new URL(`http://127.0.0.1:${window.location.port}/external.html`)
+      }
+      return url
+    },
+  },
 })
 
 // Register things for typesafety
